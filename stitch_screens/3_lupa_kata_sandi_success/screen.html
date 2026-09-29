@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KerjaKita - Lupa Kata Sandi (Success)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    body {
+      background-color: #F5F1E8;
+      color: #111111;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .panel {
+      width: 360px;
+      max-width: 100%;
+      background: #FFFFFF;
+      border: 2px solid #111111;
+      border-radius: 12px;
+      box-shadow: 6px 6px 0 #111111;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    .icon-container {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: #35C759;
+      border: 2px solid #111111;
+      box-shadow: 3px 3px 0 #111111;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 4px;
+    }
+    .icon-check {
+      width: 28px;
+      height: 28px;
+      stroke: #FFFFFF;
+      stroke-width: 3.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+    }
+    .heading {
+      font-size: 18px;
+      font-weight: 700;
+      color: #111111;
+      margin-top: 16px;
+      margin-bottom: 8px;
+    }
+    .instruction-text {
+      font-size: 13px;
+      font-weight: 400;
+      color: #666666;
+      line-height: 1.4;
+      margin-bottom: 16px;
+    }
+    .btn-submit {
+      width: 100%;
+      height: 40px;
+      background: #315CFF;
+      color: #FFFFFF;
+      border: 2px solid #111111;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      box-shadow: 3px 3px 0 #111111;
+      cursor: pointer;
+      outline: none;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <div class="icon-container">
+      <svg class="icon-check" viewBox="0 0 24 24">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    </div>
+    <h1 class="heading">Tautan Reset Terkirim</h1>
+    <p class="instruction-text">Periksa email Anda untuk tautan reset kata sandi.</p>
+    <a href="#" class="btn-submit">Kembali ke Login</a>
+  </div>
+</body>
+</html>

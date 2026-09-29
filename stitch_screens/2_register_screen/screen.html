@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KerjaKita - Register Screen</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    body {
+      background-color: #F5F1E8;
+      color: #111111;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .panel {
+      width: 440px;
+      max-width: 100%;
+      background: #FFFFFF;
+      border: 2px solid #111111;
+      border-radius: 12px;
+      box-shadow: 6px 6px 0 #111111;
+      padding: 28px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .brand-logo {
+      width: 32px;
+      height: 32px;
+      background: #315CFF;
+      color: #FFFFFF;
+      font-weight: 800;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      border: 2px solid #111111;
+    }
+    .brand-info h2 {
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.2;
+      color: #111111;
+    }
+    .brand-info p {
+      font-size: 11px;
+      font-weight: 400;
+      color: #666666;
+    }
+    .heading {
+      font-size: 18px;
+      font-weight: 700;
+      color: #111111;
+      margin-bottom: 20px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .field label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #111111;
+    }
+    .field input {
+      height: 36px;
+      background: #FFFFFF;
+      border: 2px solid #111111;
+      border-radius: 8px;
+      padding: 0 12px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #111111;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+    .field input:focus {
+      border-color: #315CFF;
+    }
+    .field input::placeholder {
+      color: #999999;
+      font-weight: 400;
+    }
+    .btn-submit {
+      margin-top: 8px;
+      width: 100%;
+      height: 40px;
+      background: #315CFF;
+      color: #FFFFFF;
+      border: 2px solid #111111;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      box-shadow: 3px 3px 0 #111111;
+      cursor: pointer;
+      outline: none;
+    }
+    .note-text {
+      font-size: 11px;
+      font-weight: 400;
+      color: #666666;
+      text-align: center;
+      margin-top: 10px;
+    }
+    .footer-divider {
+      margin-top: 16px;
+      border-top: 1px solid #E5E5E5;
+      padding-top: 14px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 500;
+      color: #111111;
+    }
+    .footer-divider a {
+      color: #315CFF;
+      text-decoration: none;
+      font-weight: 700;
+    }
+    .footer-divider a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <div class="brand">
+      <div class="brand-logo">K</div>
+      <div class="brand-info">
+        <h2>KerjaKita</h2>
+        <p>Manajemen Tenaga Kerja UMKM</p>
+      </div>
+    </div>
+    <h1 class="heading">Buat Akun Owner</h1>
+    <form class="form-group" onsubmit="event.preventDefault()">
+      <div class="field">
+        <label for="nama_usaha">Nama Usaha</label>
+        <input type="text" id="nama_usaha" placeholder="misal: CV Maju Jaya Makmur" required />
+      </div>
+      <div class="field">
+        <label for="nama_lengkap">Nama Lengkap</label>
+        <input type="text" id="nama_lengkap" placeholder="Nama lengkap pemilik usaha" required />
+      </div>
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" placeholder="nama@perusahaan.com" required />
+      </div>
+      <div class="field">
+        <label for="password">Kata Sandi</label>
+        <input type="password" id="password" placeholder="Minimal 8 karakter" required />
+      </div>
+      <div class="field">
+        <label for="password_confirm">Konfirmasi Kata Sandi</label>
+        <input type="password" id="password_confirm" placeholder="Ulangi kata sandi" required />
+      </div>
+      <button type="submit" class="btn-submit">Buat Akun Owner</button>
+      <div class="note-text">Akun karyawan dibuat oleh Owner/Admin</div>
+    </form>
+    <div class="footer-divider">
+      Sudah punya akun? <a href="#">Masuk</a>
+    </div>
+  </div>
+</body>
+</html>

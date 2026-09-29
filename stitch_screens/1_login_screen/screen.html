@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KerjaKita - Masuk ke Akun Anda</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #F5F1E8;
+      font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #111111;
+      padding: 16px;
+    }
+
+    .login-card {
+      width: 440px;
+      max-width: 100%;
+      background: #FFFFFF;
+      border: 2px solid #111111;
+      border-radius: 12px;
+      box-shadow: 6px 6px 0 #111111;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Brand section */
+    .brand-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 32px;
+      height: 32px;
+      background-color: #315CFF;
+      color: #FFFFFF;
+      font-size: 18px;
+      font-weight: 800;
+      border-radius: 6px;
+      border: 2px solid #111111;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .brand-meta {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand-name {
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.2;
+      color: #111111;
+    }
+
+    .brand-subtitle {
+      font-size: 11px;
+      font-weight: 400;
+      color: #666666;
+      line-height: 1.3;
+    }
+
+    /* Title / Heading */
+    .form-heading {
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.3;
+      color: #111111;
+    }
+
+    /* Form Styles */
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-label {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #111111;
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+
+    .form-input {
+      width: 100%;
+      height: 36px;
+      background: #FFFFFF;
+      border: 2px solid #111111;
+      border-radius: 8px;
+      padding: 0 12px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      color: #111111;
+      outline: none;
+      transition: none;
+    }
+
+    .form-input:focus {
+      border-color: #315CFF;
+      box-shadow: 2px 2px 0 #111111;
+    }
+
+    .form-input.has-toggle {
+      padding-right: 50px;
+    }
+
+    .pw-toggle-btn {
+      position: absolute;
+      right: 12px;
+      background: transparent;
+      border: none;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      color: #315CFF;
+      cursor: pointer;
+      padding: 0;
+      text-decoration: underline;
+    }
+
+    .pw-toggle-btn:hover {
+      color: #111111;
+    }
+
+    /* Utilities row: Remember me & Forgot password */
+    .options-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 2px;
+    }
+
+    .remember-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      user-select: none;
+      color: #111111;
+    }
+
+    .remember-checkbox {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border: 2px solid #111111;
+      border-radius: 4px;
+      background: #FFFFFF;
+      cursor: pointer;
+      display: inline-grid;
+      place-content: center;
+      margin: 0;
+    }
+
+    .remember-checkbox:checked {
+      background-color: #315CFF;
+    }
+
+    .remember-checkbox:checked::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      background-color: #FFFFFF;
+      clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+    }
+
+    .forgot-link {
+      font-size: 12px;
+      font-weight: 700;
+      color: #315CFF;
+      text-decoration: none;
+    }
+
+    .forgot-link:hover {
+      text-decoration: underline;
+    }
+
+    /* Submit Button */
+    .submit-button {
+      width: 100%;
+      height: 40px;
+      background-color: #315CFF;
+      color: #FFFFFF;
+      border: 2px solid #111111;
+      border-radius: 8px;
+      box-shadow: 3px 3px 0 #111111;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      outline: none;
+      margin-top: 4px;
+    }
+
+    .submit-button:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0 #111111;
+    }
+
+    /* Footer text */
+    .footer-text {
+      text-align: center;
+      font-size: 13px;
+      font-weight: 500;
+      color: #111111;
+    }
+
+    .footer-link {
+      color: #315CFF;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .footer-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <!-- Brand -->
+    <div class="brand-header">
+      <div class="brand-logo">K</div>
+      <div class="brand-meta">
+        <span class="brand-name">KerjaKita</span>
+        <span class="brand-subtitle">Manajemen Tenaga Kerja UMKM</span>
+      </div>
+    </div>
+
+    <!-- Heading -->
+    <h1 class="form-heading">Masuk ke Akun Anda</h1>
+
+    <!-- Form -->
+    <form class="login-form" onsubmit="event.preventDefault();">
+      <!-- Email Field -->
+      <div class="form-group">
+        <label class="form-label" for="email">Email</label>
+        <div class="input-wrapper">
+          <input 
+            type="email" 
+            id="email" 
+            name="email" 
+            class="form-input" 
+            placeholder="nama@perusahaan.com" 
+            required 
+          />
+        </div>
+      </div>
+
+      <!-- Password Field -->
+      <div class="form-group">
+        <label class="form-label" for="password">Kata Sandi</label>
+        <div class="input-wrapper">
+          <input 
+            type="password" 
+            id="password" 
+            name="password" 
+            class="form-input has-toggle" 
+            placeholder="Masukkan kata sandi" 
+            required 
+          />
+          <button 
+            type="button" 
+            class="pw-toggle-btn" 
+            id="togglePwBtn"
+            onclick="const p = document.getElementById('password'); const isPw = p.type === 'password'; p.type = isPw ? 'text' : 'password'; this.textContent = isPw ? 'Sembunyi' : 'Lihat';"
+          >Lihat</button>
+        </div>
+      </div>
+
+      <!-- Options Row -->
+      <div class="options-row">
+        <label class="remember-label">
+          <input type="checkbox" class="remember-checkbox" />
+          <span>Ingat Saya</span>
+        </label>
+        <a href="#lupa-sandi" class="forgot-link">Lupa Kata Sandi?</a>
+      </div>
+
+      <!-- Submit Button -->
+      <button type="submit" class="submit-button">
+        Masuk
+      </button>
+    </form>
+
+    <!-- Footer -->
+    <p class="footer-text">
+      Belum punya akun? <a href="#daftar" class="footer-link">Daftar</a>
+    </p>
+  </div>
+</body>
+</html>
