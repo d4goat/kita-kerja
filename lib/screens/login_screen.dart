@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:kita_kerja/database/index.dart';
 import 'package:kita_kerja/layouts/auth_layout.dart';
 import 'package:kita_kerja/lib/utils.dart';
+import 'package:kita_kerja/models/auth-model.dart';
 import 'package:kita_kerja/widgets/brand_header.dart';
 import 'package:kita_kerja/widgets/neo_components.dart';
+import 'package:provider/provider.dart';
+import 'package:toastification/toastification.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -13,9 +17,10 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool _rememberMe = false;
+  final _emailController = TextEditingController(text: '');
+  final _passwordController = TextEditingController(text: '');
+  final MySQLHelper _dbHelper = MySQLHelper();
+  bool _rememberMe = true;
   bool _isLoading = false;
 
   @override
@@ -28,17 +33,47 @@ class _LoginScreenState extends State<LoginScreen> {
   void _handleLogin() async {
     if (_formKey.currentState?.validate() ?? false) {
       setState(() => _isLoading = true);
-      await Future.delayed(const Duration(milliseconds: 600));
+
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
+
+      final userData = await _dbHelper.loginUser(email, password);
+
       if (!mounted) return;
       setState(() => _isLoading = false);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Login berhasil! Mengarahkan ke Dashboard...'),
-          backgroundColor: Utils.success,
-        ),
-      );
-      Navigator.pushReplacementNamed(context, '/user-list');
+      if (userData != null) {
+        final user = UserModel(
+          id: userData['id'] is int ? userData['id'] : 1,
+          name: userData['name'],
+          email: userData['email'],
+          role: userData['role'],
+          phone: userData['phone'],
+          status: userData['status'],
+        );
+
+        Provider.of<AuthModel>(context, listen: false).loginSuccess(user);
+
+        Utils.toast(
+          context,
+          'Login berhasil sebagai ${user.name} (${user.role.toUpperCase()})!',
+          ToastificationType.success,
+          Icons.check,
+          Utils.success,
+        );
+
+        await Future.delayed(const Duration(milliseconds: 600));
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, '/dashboard');
+      } else {
+        Utils.toast(
+          context,
+          'Email atau kata sandi salah, silahkan coba lagi',
+          ToastificationType.error,
+          Icons.close,
+          Utils.danger,
+        );
+      }
     }
   }
 

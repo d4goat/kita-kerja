@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:kita_kerja/database/index.dart';
 import 'package:kita_kerja/layouts/auth_layout.dart';
 import 'package:kita_kerja/lib/utils.dart';
 import 'package:kita_kerja/widgets/brand_header.dart';
 import 'package:kita_kerja/widgets/neo_components.dart';
+import 'package:toastification/toastification.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -18,6 +20,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final MySQLHelper _dbHelper = MySQLHelper();
   bool _isLoading = false;
 
   @override
@@ -33,27 +36,44 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void _handleRegister() async {
     if (_formKey.currentState?.validate() ?? false) {
       if (_passwordController.text != _confirmPasswordController.text) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Konfirmasi kata sandi tidak cocok!'),
-            backgroundColor: Utils.danger,
-          ),
+        Utils.toast(
+          context,
+          'Konfirmasi kata sandi tidak sesuai!',
+          ToastificationType.error,
+          Icons.close,
+          Utils.danger,
         );
         return;
       }
 
       setState(() => _isLoading = true);
-      await Future.delayed(const Duration(milliseconds: 600));
+
+      final success = await _dbHelper.registerOwner(
+        namaUsaha: _namaUsahaController.text.trim(),
+        namaLengkap: _namaLengkapController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+
       if (!mounted) return;
       setState(() => _isLoading = false);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pendaftaran berhasil! Silakan masuk.'),
-          backgroundColor: Utils.success,
-        ),
-      );
-      Navigator.pushReplacementNamed(context, '/login');
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pendaftaran akun Owner berhasil! Silakan masuk.'),
+            backgroundColor: Utils.success,
+          ),
+        );
+        Navigator.pushReplacementNamed(context, '/login');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gagal mendaftarkan akun. Silakan coba lagi.'),
+            backgroundColor: Utils.danger,
+          ),
+        );
+      }
     }
   }
 

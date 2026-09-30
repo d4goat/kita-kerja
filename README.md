@@ -1,11 +1,19 @@
 # KerjaKita 💼
 
 **Sistem Manajemen Tenaga Kerja untuk UMKM**  
-*Versi 1.0 (MVP)*
+_Versi 1.0 (MVP)_
 
 ---
 
+## Anggota Kelompok
+
+- **Febiandi Hafiz Pratama** - 25082010215 (Captain).
+- **Rasya Febrian Susanto** - 25082010232 (Hipster).
+- **Nabil Ilham Hanafi** - 25082010223 (Hustler).
+- **Achmadillah Yusuf Faqih Febrianto** - 25082010193 (Hacker).
+
 ## 📌 Ringkasan Produk
+
 **KerjaKita** adalah aplikasi manajemen tenaga kerja berbasis desktop (Flutter) yang dirancang khusus untuk memenuhi kebutuhan Usaha Mikro, Kecil, dan Menengah (UMKM). Aplikasi ini memusatkan pengelolaan data karyawan, pencatatan kehadiran, pembagian pekerjaan, analisis beban kerja, hingga informasi penggajian dalam satu sistem yang terstruktur dan mudah digunakan.
 
 Aplikasi ini juga selaras dengan mendukung pencapaian **SDG 8 (Decent Work and Economic Growth)** melalui transparansi kompensasi, digitalisasi pencatatan kerja, serta evaluasi beban kerja secara berkelanjutan.
@@ -13,6 +21,7 @@ Aplikasi ini juga selaras dengan mendukung pencapaian **SDG 8 (Decent Work and E
 ---
 
 ## 🎯 Tujuan Utama
+
 - **Sentralisasi Data**: Memusatkan seluruh data karyawan dan master data usaha dalam satu platform.
 - **Efisiensi Kehadiran**: Memudahkan pencatatan masuk/pulang kerja, durasi jam kerja, dan perhitungan lembur.
 - **Manajemen Pekerjaan**: Mendistribusikan dan memantau progres tugas harian/proyek secara efisien.
@@ -23,16 +32,16 @@ Aplikasi ini juga selaras dengan mendukung pencapaian **SDG 8 (Decent Work and E
 
 ## 👥 Role Pengguna & Hak Akses
 
-| Fitur | Admin / Owner | Manager / Supervisor | Karyawan |
-| :--- | :---: | :---: | :---: |
-| **Dashboard** | Full (Keseluruhan) | View (Tim) | View (Pribadi) |
-| **Karyawan** | Full | View Tim | Data Sendiri |
-| **Kehadiran** | Full | View/Review | Clock-in / Clock-out |
-| **Pekerjaan** | Full | Full | Tugas Sendiri & Progres |
-| **Beban Kerja** | Full | Full | Data Sendiri |
-| **Gaji** | Full | View (Sesuai Kebutuhan) | Data Sendiri |
-| **Data Master** | Full | View | Tidak Akses |
-| **Profil & Keamanan** | Data Sendiri | Data Sendiri | Data Sendiri |
+| Fitur                 |   Admin / Owner    |  Manager / Supervisor   |        Karyawan         |
+| :-------------------- | :----------------: | :---------------------: | :---------------------: |
+| **Dashboard**         | Full (Keseluruhan) |       View (Tim)        |     View (Pribadi)      |
+| **Karyawan**          |        Full        |        View Tim         |      Data Sendiri       |
+| **Kehadiran**         |        Full        |       View/Review       |  Clock-in / Clock-out   |
+| **Pekerjaan**         |        Full        |          Full           | Tugas Sendiri & Progres |
+| **Beban Kerja**       |        Full        |          Full           |      Data Sendiri       |
+| **Gaji**              |        Full        | View (Sesuai Kebutuhan) |      Data Sendiri       |
+| **Data Master**       |        Full        |          View           |       Tidak Akses       |
+| **Profil & Keamanan** |    Data Sendiri    |      Data Sendiri       |      Data Sendiri       |
 
 ---
 
@@ -54,6 +63,7 @@ Aplikasi ini juga selaras dengan mendukung pencapaian **SDG 8 (Decent Work and E
 ## 🎨 Panduan UI/UX
 
 Sistem antarmuka KerjaKita mengusung gaya **Professional Neo-Brutalism** dengan karakteristik:
+
 - **Target Resolusi**: Desktop 1366×768 / 1440×900
 - **Skema Warna**:
   - Background: `#F5F1E8` (Warm Off-white)
@@ -67,7 +77,9 @@ Sistem antarmuka KerjaKita mengusung gaya **Professional Neo-Brutalism** dengan 
 ---
 
 ## 🗄️ Arsitektur Data & DBMS
+
 Sistem menggunakan **MySQL 8.x** sebagai DBMS backend dengan alur data utama:
+
 ```text
 Data Master ──> Karyawan ──> Pekerjaan + Kehadiran ──> Beban Kerja ──> Gaji ──> Dashboard & Evaluasi
 ```
@@ -77,6 +89,7 @@ Data Master ──> Karyawan ──> Pekerjaan + Kehadiran ──> Beban Kerja �
 ## 🚀 Cara Menjalankan Aplikasi
 
 ### Prasyarat
+
 - Flutter SDK (Channel stable)
 - Dart SDK
 - Desktop Development Target (Windows/macOS/Linux)
@@ -84,12 +97,14 @@ Data Master ──> Karyawan ──> Pekerjaan + Kehadiran ──> Beban Kerja �
 ### Langkah Jalankan
 
 1. **Clone repository & masuk ke direktori proyek**:
+
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/d4goat/kita-kerja
    cd kita_kerja
    ```
 
 2. **Install dependensi**:
+
    ```bash
    flutter pub get
    ```
@@ -100,5 +115,5 @@ Data Master ──> Karyawan ──> Pekerjaan + Kehadiran ──> Beban Kerja �
    ```
 
 ---
-*KerjaKita — Empowering UMKM Workforce Management*
 
+_KerjaKita — Empowering UMKM Workforce Management_

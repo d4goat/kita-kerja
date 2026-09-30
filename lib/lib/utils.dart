@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
+import 'package:toastification/toastification.dart';
 
 class Utils {
   static MediaQueryData? mediaQueryData;
@@ -47,4 +48,55 @@ class Utils {
     borderRadius: BorderRadius.all(Radius.circular(8)),
     borderSide: BorderSide(color: danger),
   );
+
+  static void toast(
+    BuildContext context,
+    String title,
+    ToastificationType type,
+    IconData icon,
+    dynamic theme,
+  ) {
+    toastification.show(
+      context: context,
+      type: type,
+      style: ToastificationStyle.fillColored,
+      autoCloseDuration: const Duration(seconds: 4),
+      title: Text(title, style: TextStyle(color: theme)),
+      alignment: Alignment.topRight,
+      direction: TextDirection.ltr,
+      icon: Icon(icon, color: theme),
+      showIcon: true,
+      primaryColor: Colors.white,
+      backgroundColor: Colors.white,
+      foregroundColor: Colors.black,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x07000000),
+          blurRadius: 16,
+          offset: Offset(0, 16),
+          spreadRadius: 0,
+        ),
+      ],
+      showProgressBar: true,
+      progressBarTheme: ProgressIndicatorThemeData(color: theme),
+      closeButton: ToastCloseButton(
+        showType: CloseButtonShowType.onHover,
+        buttonBuilder: (context, onClose) {
+          return OutlinedButton.icon(
+            onPressed: onClose,
+            icon: const Icon(Icons.close, size: 20),
+            label: const Text('Close'),
+          );
+        },
+      ),
+      closeOnClick: false,
+      pauseOnHover: true,
+      dragToClose: true,
+      applyBlurEffect: true,
+      onHoverMouseCursor: SystemMouseCursors.click,
+    );
+  }
 }

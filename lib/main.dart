@@ -1,167 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:kita_kerja/database/index.dart';
+import 'package:kita_kerja/lib/utils.dart';
 import 'package:kita_kerja/models/auth-model.dart';
+import 'package:kita_kerja/screens/dashboard_screen.dart';
 import 'package:kita_kerja/screens/forgot_password_screen.dart';
 import 'package:kita_kerja/screens/forgot_password_success_screen.dart';
+import 'package:kita_kerja/screens/karyawan_screen.dart';
+import 'package:kita_kerja/screens/kehadiran_screen.dart';
 import 'package:kita_kerja/screens/login_screen.dart';
+import 'package:kita_kerja/screens/master_data_screen.dart';
+import 'package:kita_kerja/screens/pekerjaan_screen.dart';
+import 'package:kita_kerja/screens/profile_screen.dart';
 import 'package:kita_kerja/screens/register_screen.dart';
-import 'package:kita_kerja/lib/utils.dart';
+import 'package:kita_kerja/screens/user_list_screen.dart';
+import 'package:kita_kerja/widgets/svg_transition.dart';
 import 'package:provider/provider.dart';
 
 void main() {
   runApp(const MyApp());
-}
-
-class UserListScreen extends StatefulWidget {
-  const UserListScreen({super.key});
-
-  @override
-  State<UserListScreen> createState() => _UserListScreenState();
-}
-
-class _UserListScreenState extends State<UserListScreen> {
-  final MySQLHelper _dbHelper = MySQLHelper();
-
-  late Future<List<Map<String, dynamic>>> _usersFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _usersFuture = _dbHelper.getUsers();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Utils.background,
-      appBar: AppBar(
-        title: const Text(
-          'Daftar Pengguna',
-          style: TextStyle(color: Utils.border, fontWeight: FontWeight.w700),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        shape: const Border(bottom: BorderSide(color: Utils.border, width: 2)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: Utils.border),
-            onPressed: () {
-              Navigator.pushReplacementNamed(context, '/login');
-            },
-          ),
-        ],
-      ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _usersFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(color: Utils.primary),
-            );
-          }
-
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-
-          final users = snapshot.data ?? [];
-
-          if (users.isEmpty) {
-            return Center(
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Utils.border, width: 2),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Utils.border,
-                      offset: Offset(4, 4),
-                      blurRadius: 0,
-                    ),
-                  ],
-                ),
-                child: const Text(
-                  'Data pengguna kosong',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Utils.border,
-                  ),
-                ),
-              ),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            itemCount: users.length,
-            itemBuilder: (context, index) {
-              final user = users[index];
-
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Utils.border, width: 2),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Utils.border,
-                      offset: Offset(3, 3),
-                      blurRadius: 0,
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: Utils.primary,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Utils.border, width: 2),
-                      ),
-                      child: const Icon(
-                        Icons.person,
-                        color: Colors.white,
-                        size: 22,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          user['name'] ?? '',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: Utils.border,
-                          ),
-                        ),
-                        Text(
-                          user['email'] ?? '',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF666666),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
 }
 
 class MyApp extends StatelessWidget {
@@ -194,13 +51,74 @@ class MyApp extends StatelessWidget {
           ),
         ),
         initialRoute: '/login',
-        routes: {
-          '/login': (context) => const LoginScreen(),
-          '/register': (context) => const RegisterScreen(),
-          '/forgot-password': (context) => const ForgotPasswordScreen(),
-          '/forgot-password-success': (context) =>
-              const ForgotPasswordSuccessScreen(),
-          '/user-list': (context) => const UserListScreen(),
+        onGenerateRoute: (settings) {
+          Widget page;
+          switch (settings.name) {
+            case '/login':
+              page = const LoginScreen();
+              break;
+            case '/register':
+              page = const RegisterScreen();
+              break;
+            case '/forgot-password':
+              page = const ForgotPasswordScreen();
+              break;
+            case '/forgot-password-success':
+              page = const ForgotPasswordSuccessScreen();
+              break;
+            case '/dashboard':
+              page = const DashboardScreen();
+              break;
+            case '/master-data':
+              page = const MasterDataScreen();
+              break;
+            case '/profile':
+              page = const ProfileScreen();
+              break;
+            case '/karyawan':
+              page = const KaryawanScreen();
+              break;
+            case '/kehadiran':
+              page = const KehadiranScreen();
+              break;
+            case '/pekerjaan':
+              page = const PekerjaanScreen();
+              break;
+            case '/user-list':
+              page = const UserListScreen();
+              break;
+            default:
+              page = const LoginScreen();
+          }
+
+          return PageRouteBuilder(
+            settings: settings,
+            transitionDuration: const Duration(milliseconds: 2400),
+            reverseTransitionDuration: const Duration(milliseconds: 2200),
+            pageBuilder: (context, animation, secondaryAnimation) => page,
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      FadeTransition(
+                        opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
+                          CurvedAnimation(
+                            parent: animation,
+                            curve: const Interval(
+                              0.45,
+                              0.55,
+                              curve: Curves.easeIn,
+                            ),
+                          ),
+                        ),
+                        child: child,
+                      ),
+                      SvgPathTransition(animation: animation),
+                    ],
+                  );
+                },
+          );
         },
       ),
     );
