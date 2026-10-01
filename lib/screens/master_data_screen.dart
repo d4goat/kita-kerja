@@ -195,7 +195,7 @@ class _MasterDataScreenState extends State<MasterDataScreen> {
                         ),
                         const SizedBox(height: 6),
                         DropdownButtonFormField<String>(
-                          value: status,
+                          initialValue: status,
                           decoration: InputDecoration(
                             filled: true,
                             fillColor: Colors.white,
@@ -236,6 +236,7 @@ class _MasterDataScreenState extends State<MasterDataScreen> {
                     final name = nameController.text.trim();
                     if (name.isEmpty) return;
 
+                    final messenger = ScaffoldMessenger.of(context);
                     Navigator.pop(dialogContext);
 
                     if (_selectedTabIndex == 4) {
@@ -299,8 +300,7 @@ class _MasterDataScreenState extends State<MasterDataScreen> {
                     }
 
                     _loadData();
-                    if (!mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    messenger.showSnackBar(
                       SnackBar(
                         content: Text(isEdit ? 'Data berhasil diperbarui!' : 'Data berhasil ditambahkan!'),
                         backgroundColor: Utils.success,
@@ -361,6 +361,7 @@ class _MasterDataScreenState extends State<MasterDataScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
                 Navigator.pop(dialogContext);
                 switch (_selectedTabIndex) {
                   case 0:
@@ -380,8 +381,7 @@ class _MasterDataScreenState extends State<MasterDataScreen> {
                     break;
                 }
                 _loadData();
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
+                messenger.showSnackBar(
                   SnackBar(
                     content: Text('Status "$name" berhasil diubah!'),
                     backgroundColor: Utils.success,

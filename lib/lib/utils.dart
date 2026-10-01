@@ -38,6 +38,7 @@ class Utils {
   static const Color secondary = Color(0xFFF5C542);
   static const Color success = Color(0xFF35C759);
   static const Color danger = Color(0xFFFF5A5F);
+  static const Color mainBackground = Color(0xFFFFF4F4);
 
   static const focusBorder = OutlineInputBorder(
     borderRadius: BorderRadius.all(Radius.circular(8)),

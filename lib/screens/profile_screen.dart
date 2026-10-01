@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kita_kerja/layouts/main_layout.dart';
 import 'package:kita_kerja/lib/utils.dart';
-import 'package:kita_kerja/models/auth-model.dart';
+import 'package:kita_kerja/models/auth_model.dart';
 import 'package:kita_kerja/widgets/neo_components.dart';
 import 'package:provider/provider.dart';
 

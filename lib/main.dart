@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:kita_kerja/database/index.dart';
 import 'package:kita_kerja/lib/utils.dart';
-import 'package:kita_kerja/models/auth-model.dart';
+import 'package:kita_kerja/models/auth_model.dart';
 import 'package:kita_kerja/screens/dashboard_screen.dart';
 import 'package:kita_kerja/screens/forgot_password_screen.dart';
 import 'package:kita_kerja/screens/forgot_password_success_screen.dart';
+import 'package:kita_kerja/screens/karyawan_form_screen.dart';
 import 'package:kita_kerja/screens/karyawan_screen.dart';
 import 'package:kita_kerja/screens/kehadiran_screen.dart';
 import 'package:kita_kerja/screens/login_screen.dart';
@@ -77,6 +77,9 @@ class MyApp extends StatelessWidget {
               break;
             case '/karyawan':
               page = const KaryawanScreen();
+              break;
+            case '/karyawan-form':
+              page = const KaryawanFormScreen();
               break;
             case '/kehadiran':
               page = const KehadiranScreen();

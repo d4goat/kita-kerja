@@ -47,6 +47,7 @@ class NeoButton extends StatefulWidget {
   final Color backgroundColor;
   final Color textColor;
   final double height;
+  final double? width;
   final bool isLoading;
 
   const NeoButton({
@@ -56,6 +57,7 @@ class NeoButton extends StatefulWidget {
     this.backgroundColor = Utils.primary,
     this.textColor = Colors.white,
     this.height = 42,
+    this.width,
     this.isLoading = false,
   });
 
@@ -84,7 +86,7 @@ class _NeoButtonState extends State<NeoButton> {
             _isPressed ? 2 : 0,
             0,
           ),
-          width: double.infinity,
+          width: widget.width ?? double.infinity,
           height: widget.height,
           decoration: BoxDecoration(
             color: widget.backgroundColor,

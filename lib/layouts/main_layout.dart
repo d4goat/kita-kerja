@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kita_kerja/lib/utils.dart';
-import 'package:kita_kerja/models/auth-model.dart';
+import 'package:kita_kerja/models/auth_model.dart';
 import 'package:provider/provider.dart';
 
 class MainLayout extends StatefulWidget {
@@ -133,7 +133,7 @@ class _MainLayoutState extends State<MainLayout> {
     Utils().init(context);
     final auth = Provider.of<AuthModel>(context);
     final currentUser = auth.currentUser;
-    final userName = currentUser?.name ?? 'Hendra Wijaya';
+    final userName = currentUser?.name ?? 'User';
     final userRole = currentUser?.role.toUpperCase() ?? 'ADMIN';
 
     return Scaffold(

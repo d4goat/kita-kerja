@@ -20,7 +20,7 @@ class DashboardScreen extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF4F4),
+                color: Utils.mainBackground,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: Utils.border, width: 2),
                 boxShadow: const [
@@ -102,7 +102,13 @@ class DashboardScreen extends StatelessWidget {
             // 2. KPI CARDS (4 Columns Row)
             Row(
               children: [
-                Expanded(child: _buildKpiCard('TOTAL KARYAWAN', '6', badgeText: 'AKTIF')),
+                Expanded(
+                  child: _buildKpiCard(
+                    'TOTAL KARYAWAN',
+                    '6',
+                    badgeText: 'AKTIF',
+                  ),
+                ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: _buildKpiCard(
@@ -163,7 +169,11 @@ class DashboardScreen extends StatelessWidget {
                           children: [
                             Row(
                               children: const [
-                                Icon(Icons.bar_chart_rounded, size: 20, color: Utils.border),
+                                Icon(
+                                  Icons.bar_chart_rounded,
+                                  size: 20,
+                                  color: Utils.border,
+                                ),
                                 SizedBox(width: 8),
                                 Text(
                                   'BEBAN KERJA PER KARYAWAN',
@@ -177,7 +187,10 @@ class DashboardScreen extends StatelessWidget {
                               ],
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFF0F0F0),
                                 borderRadius: BorderRadius.circular(4),
@@ -194,7 +207,12 @@ class DashboardScreen extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 20),
-                        _buildWorkloadItem('Budi Santoso', 1.125, '112,5%', isOverload: true),
+                        _buildWorkloadItem(
+                          'Budi Santoso',
+                          1.125,
+                          '112,5%',
+                          isOverload: true,
+                        ),
                         const SizedBox(height: 14),
                         _buildWorkloadItem('Dimas Pratama', 1.0, '100%'),
                         const SizedBox(height: 14),
@@ -219,7 +237,10 @@ class DashboardScreen extends StatelessWidget {
                                 const SizedBox(width: 6),
                                 const Text(
                                   'Overload > 100%',
-                                  style: TextStyle(fontSize: 11, color: Color(0xFF666666)),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Color(0xFF666666),
+                                  ),
                                 ),
                               ],
                             ),
@@ -237,7 +258,10 @@ class DashboardScreen extends StatelessWidget {
                                 const SizedBox(width: 6),
                                 const Text(
                                   'Optimal Terkendali',
-                                  style: TextStyle(fontSize: 11, color: Color(0xFF666666)),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Color(0xFF666666),
+                                  ),
                                 ),
                               ],
                             ),
@@ -303,7 +327,10 @@ class DashboardScreen extends StatelessWidget {
                             2: FlexColumnWidth(1.2),
                           },
                           border: const TableBorder(
-                            horizontalInside: BorderSide(color: Color(0xFFEEEEEE), width: 1),
+                            horizontalInside: BorderSide(
+                              color: Color(0xFFEEEEEE),
+                              width: 1,
+                            ),
                           ),
                           children: [
                             TableRow(
@@ -377,7 +404,11 @@ class DashboardScreen extends StatelessWidget {
                     children: [
                       Row(
                         children: const [
-                          Icon(Icons.pie_chart_outline_rounded, size: 20, color: Utils.border),
+                          Icon(
+                            Icons.pie_chart_outline_rounded,
+                            size: 20,
+                            color: Utils.border,
+                          ),
                           SizedBox(width: 8),
                           Text(
                             'PEKERJAAN MENDEKATI DEADLINE',
@@ -391,7 +422,10 @@ class DashboardScreen extends StatelessWidget {
                         ],
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFFFF0F0),
                           borderRadius: BorderRadius.circular(12),
@@ -417,11 +451,16 @@ class DashboardScreen extends StatelessWidget {
                       3: FlexColumnWidth(1.5),
                     },
                     border: const TableBorder(
-                      horizontalInside: BorderSide(color: Color(0xFFEEEEEE), width: 1),
+                      horizontalInside: BorderSide(
+                        color: Color(0xFFEEEEEE),
+                        width: 1,
+                      ),
                     ),
                     children: [
                       TableRow(
-                        decoration: const BoxDecoration(color: Color(0xFFF9F9F9)),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFF9F9F9),
+                        ),
                         children: [
                           _buildTableCell('TUGAS', isHeader: true),
                           _buildTableCell('PENANGGUNG JAWAB', isHeader: true),
@@ -431,26 +470,48 @@ class DashboardScreen extends StatelessWidget {
                       ),
                       TableRow(
                         children: [
-                          _buildTaskTableCell('Produksi roti tawar 200 pcs', Colors.blue),
+                          _buildTaskTableCell(
+                            'Produksi roti tawar 200 pcs',
+                            Colors.blue,
+                          ),
                           _buildTableCell('Budi Santoso'),
                           _buildDateCell('21 Sep 2026'),
-                          _buildStatusBadge('SEDANG DIKERJAKAN', Utils.primary, Colors.white),
+                          _buildStatusBadge(
+                            'SEDANG DIKERJAKAN',
+                            Utils.primary,
+                            Colors.white,
+                          ),
                         ],
                       ),
                       TableRow(
                         children: [
-                          _buildTaskTableCell('Pengemasan pesanan katering', Colors.grey),
+                          _buildTaskTableCell(
+                            'Pengemasan pesanan katering',
+                            Colors.grey,
+                          ),
                           _buildTableCell('Lestari Ayu'),
                           _buildDateCell('21 Sep 2026'),
-                          _buildStatusBadge('BELUM MULAI', Colors.white, Utils.border, isOutline: true),
+                          _buildStatusBadge(
+                            'BELUM MULAI',
+                            Colors.white,
+                            Utils.border,
+                            isOutline: true,
+                          ),
                         ],
                       ),
                       TableRow(
                         children: [
-                          _buildTaskTableCell('Pengiriman pesanan toko', Utils.secondary),
+                          _buildTaskTableCell(
+                            'Pengiriman pesanan toko',
+                            Utils.secondary,
+                          ),
                           _buildTableCell('Dimas Pratama'),
                           _buildDateCell('22 Sep 2026'),
-                          _buildStatusBadge('DITINJAU', Utils.secondary, Utils.border),
+                          _buildStatusBadge(
+                            'DITINJAU',
+                            Utils.secondary,
+                            Utils.border,
+                          ),
                         ],
                       ),
                     ],
@@ -479,11 +540,7 @@ class DashboardScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Utils.border, width: 2),
         boxShadow: const [
-          BoxShadow(
-            color: Utils.border,
-            offset: Offset(3, 3),
-            blurRadius: 0,
-          ),
+          BoxShadow(color: Utils.border, offset: Offset(3, 3), blurRadius: 0),
         ],
       ),
       child: Column(
@@ -514,7 +571,10 @@ class DashboardScreen extends StatelessWidget {
               ),
               if (badgeText != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: badgeColor,
                     borderRadius: BorderRadius.circular(6),
@@ -546,7 +606,12 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildWorkloadItem(String name, double factor, String percentageText, {bool isOverload = false}) {
+  Widget _buildWorkloadItem(
+    String name,
+    double factor,
+    String percentageText, {
+    bool isOverload = false,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -566,7 +631,8 @@ class DashboardScreen extends StatelessWidget {
         const SizedBox(height: 6),
         LayoutBuilder(
           builder: (context, constraints) {
-            double barWidth = constraints.maxWidth * (factor > 1.0 ? 1.0 : factor);
+            double barWidth =
+                constraints.maxWidth * (factor > 1.0 ? 1.0 : factor);
             return Stack(
               clipBehavior: Clip.none,
               children: [
@@ -595,7 +661,11 @@ class DashboardScreen extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (isOverload) ...[
-                        const Icon(Icons.warning_amber_rounded, size: 12, color: Colors.white),
+                        const Icon(
+                          Icons.warning_amber_rounded,
+                          size: 12,
+                          color: Colors.white,
+                        ),
                         const SizedBox(width: 4),
                       ],
                       Text(
@@ -617,7 +687,11 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTableCell(String text, {bool isHeader = false, bool isBold = false}) {
+  Widget _buildTableCell(
+    String text, {
+    bool isHeader = false,
+    bool isBold = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
       child: Text(
@@ -627,8 +701,8 @@ class DashboardScreen extends StatelessWidget {
           fontWeight: isHeader
               ? FontWeight.w800
               : isBold
-                  ? FontWeight.w700
-                  : FontWeight.w500,
+              ? FontWeight.w700
+              : FontWeight.w500,
           color: isHeader ? const Color(0xFF666666) : Utils.border,
           letterSpacing: isHeader ? 0.5 : 0,
         ),
@@ -643,7 +717,11 @@ class DashboardScreen extends StatelessWidget {
         children: [
           Text(
             text,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Utils.border),
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: Utils.border,
+            ),
           ),
           const SizedBox(width: 8),
           Container(
@@ -698,7 +776,11 @@ class DashboardScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
       child: Row(
         children: [
-          const Icon(Icons.calendar_today_outlined, size: 14, color: Utils.danger),
+          const Icon(
+            Icons.calendar_today_outlined,
+            size: 14,
+            color: Utils.danger,
+          ),
           const SizedBox(width: 6),
           Text(
             date,
@@ -713,7 +795,12 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusBadge(String text, Color bg, Color textCol, {bool isOutline = false}) {
+  Widget _buildStatusBadge(
+    String text,
+    Color bg,
+    Color textCol, {
+    bool isOutline = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
       child: Align(

@@ -877,3 +877,550 @@ working_hours
 -- =========================================================
 -- SELESAI
 -- =========================================================
+
+## DB SQL QUERY FOR DATA
+
+USE kerjakita;
+
+START TRANSACTION;
+
+-- =========================================================
+-- 1. USERS
+-- Password hash di bawah adalah bcrypt untuk plaintext: password
+-- =========================================================
+INSERT INTO users (role_id, name, email, password, phone, status)
+VALUES
+(
+(SELECT id FROM roles WHERE name = 'admin'),
+'Admin KerjaKita',
+'admin@kerjakita.local',
+'$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+'081234567890',
+'active'
+),
+(
+(SELECT id FROM roles WHERE name = 'manager'),
+'Budi Manager',
+'manager@kerjakita.local',
+'$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+'081234567891',
+'active'
+),
+(
+(SELECT id FROM roles WHERE name = 'employee'),
+'Citra Staff',
+'citra@kerjakita.local',
+'$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+'081234567892',
+'active'
+),
+(
+(SELECT id FROM roles WHERE name = 'employee'),
+'Dedi Staff',
+'dedi@kerjakita.local',
+'$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+'081234567893',
+'active'
+),
+(
+(SELECT id FROM roles WHERE name = 'employee'),
+'Eka Staff',
+'eka@kerjakita.local',
+'$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+'081234567894',
+'active'
+),
+(
+(SELECT id FROM roles WHERE name = 'employee'),
+'Fajar Staff',
+'fajar@kerjakita.local',
+'$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi',
+'081234567895',
+'active'
+);
+
+-- =========================================================
+-- 2. EMPLOYEES
+-- =========================================================
+INSERT INTO employees (
+user_id,
+employee_code,
+full_name,
+email,
+phone,
+position_id,
+department_id,
+salary_type_id,
+work_schedule_id,
+join_date,
+status
+)
+VALUES
+(
+(SELECT id FROM users WHERE email = 'admin@kerjakita.local'),
+'EMP001',
+'Admin KerjaKita',
+'admin@kerjakita.local',
+'081234567890',
+(SELECT id FROM positions WHERE name = 'Owner'),
+(SELECT id FROM departments WHERE name = 'Operasional'),
+(SELECT id FROM salary_types WHERE name = 'Bulanan'),
+(SELECT id FROM work_schedules WHERE name = 'Jam Kerja Normal'),
+'2024-01-01',
+'active'
+),
+(
+(SELECT id FROM users WHERE email = 'manager@kerjakita.local'),
+'EMP002',
+'Budi Manager',
+'manager@kerjakita.local',
+'081234567891',
+(SELECT id FROM positions WHERE name = 'Supervisor'),
+(SELECT id FROM departments WHERE name = 'Operasional'),
+(SELECT id FROM salary_types WHERE name = 'Bulanan'),
+(SELECT id FROM work_schedules WHERE name = 'Jam Kerja Normal'),
+'2024-02-01',
+'active'
+),
+(
+(SELECT id FROM users WHERE email = 'citra@kerjakita.local'),
+'EMP003',
+'Citra Staff',
+'citra@kerjakita.local',
+'081234567892',
+(SELECT id FROM positions WHERE name = 'Staff'),
+(SELECT id FROM departments WHERE name = 'Operasional'),
+(SELECT id FROM salary_types WHERE name = 'Bulanan'),
+(SELECT id FROM work_schedules WHERE name = 'Jam Kerja Normal'),
+'2024-03-01',
+'active'
+),
+(
+(SELECT id FROM users WHERE email = 'dedi@kerjakita.local'),
+'EMP004',
+'Dedi Staff',
+'dedi@kerjakita.local',
+'081234567893',
+(SELECT id FROM positions WHERE name = 'Staff'),
+(SELECT id FROM departments WHERE name = 'Pemasaran'),
+(SELECT id FROM salary_types WHERE name = 'Bulanan'),
+(SELECT id FROM work_schedules WHERE name = 'Shift Pagi'),
+'2024-04-01',
+'active'
+),
+(
+(SELECT id FROM users WHERE email = 'eka@kerjakita.local'),
+'EMP005',
+'Eka Staff',
+'eka@kerjakita.local',
+'081234567894',
+(SELECT id FROM positions WHERE name = 'Staff'),
+(SELECT id FROM departments WHERE name = 'Teknologi'),
+(SELECT id FROM salary_types WHERE name = 'Bulanan'),
+(SELECT id FROM work_schedules WHERE name = 'Jam Kerja Normal'),
+'2024-05-01',
+'active'
+),
+(
+(SELECT id FROM users WHERE email = 'fajar@kerjakita.local'),
+'EMP006',
+'Fajar Staff',
+'fajar@kerjakita.local',
+'081234567895',
+(SELECT id FROM positions WHERE name = 'Staff'),
+(SELECT id FROM departments WHERE name = 'Teknologi'),
+(SELECT id FROM salary_types WHERE name = 'Kontrak'),
+(SELECT id FROM work_schedules WHERE name = 'Jam Kerja Normal'),
+'2024-06-01',
+'active'
+);
+
+-- =========================================================
+-- 3. EMPLOYEE SUPERVISORS
+-- =========================================================
+INSERT INTO employee_supervisors (employee_id, supervisor_id)
+VALUES
+(
+(SELECT id FROM employees WHERE employee_code = 'EMP002'),
+(SELECT id FROM employees WHERE employee_code = 'EMP001')
+),
+(
+(SELECT id FROM employees WHERE employee_code = 'EMP003'),
+(SELECT id FROM employees WHERE employee_code = 'EMP002')
+),
+(
+(SELECT id FROM employees WHERE employee_code = 'EMP004'),
+(SELECT id FROM employees WHERE employee_code = 'EMP002')
+),
+(
+(SELECT id FROM employees WHERE employee_code = 'EMP005'),
+(SELECT id FROM employees WHERE employee_code = 'EMP002')
+),
+(
+(SELECT id FROM employees WHERE employee_code = 'EMP006'),
+(SELECT id FROM employees WHERE employee_code = 'EMP002')
+);
+
+-- =========================================================
+-- 4. ATTENDANCES
+-- =========================================================
+INSERT INTO attendances (
+employee_id,
+attendance_date,
+clock_in,
+clock_out,
+working_minutes,
+overtime_minutes,
+status,
+notes
+)
+VALUES
+(
+(SELECT id FROM employees WHERE employee_code = 'EMP003'),
+'2026-09-01',
+'2026-09-01 08:00:00',
+'2026-09-01 17:00:00',
+480,
+0,
+'present',
+NULL
+),
+(
+(SELECT id FROM employees WHERE employee_code = 'EMP003'),
+'2026-09-02',
+'2026-09-02 08:15:00',
+'2026-09-02 17:00:00',
+465,
+0,
+'late',
+'Terlambat 15 menit'
+),
+(
+(SELECT id FROM employees WHERE employee_code = 'EMP004'),
+'2026-09-01',
+'2026-09-01 07:00:00',
+'2026-09-01 15:00:00',
+420,
+0,
+'present',
+NULL
+),
+(
+(SELECT id FROM employees WHERE employee_code = 'EMP004'),
+'2026-09-02',
+NULL,
+NULL,
+0,
+0,
+'sick',
+'Surat dokter'
+),
+(
+(SELECT id FROM employees WHERE employee_code = 'EMP005'),
+'2026-09-01',
+'2026-09-01 08:05:00',
+'2026-09-01 18:00:00',
+535,
+55,
+'present',
+'Lembur 55 menit'
+),
+(
+(SELECT id FROM employees WHERE employee_code = 'EMP005'),
+'2026-09-02',
+'2026-09-02 08:00:00',
+'2026-09-02 17:00:00',
+480,
+0,
+'present',
+NULL
+),
+(
+(SELECT id FROM employees WHERE employee_code = 'EMP006'),
+'2026-09-01',
+NULL,
+NULL,
+0,
+0,
+'leave',
+'Cuti tahunan'
+),
+(
+(SELECT id FROM employees WHERE employee_code = 'EMP006'),
+'2026-09-02',
+'2026-09-02 08:00:00',
+'2026-09-02 17:00:00',
+480,
+0,
+'present',
+NULL
+);
+
+-- =========================================================
+-- 5. TASKS
+-- =========================================================
+INSERT INTO tasks (
+category_id,
+created_by,
+assigned_to,
+title,
+description,
+priority,
+status,
+estimated_hours,
+actual_hours,
+start_date,
+deadline,
+completed_at
+)
+VALUES
+(
+(SELECT id FROM job_categories WHERE name = 'Operasional'),
+(SELECT id FROM users WHERE email = 'admin@kerjakita.local'),
+(SELECT id FROM employees WHERE employee_code = 'EMP003'),
+'Input data penjualan harian',
+'Memasukkan data penjualan ke spreadsheet',
+'high',
+'in_progress',
+8.00,
+4.00,
+'2026-09-01',
+'2026-09-05',
+NULL
+),
+(
+(SELECT id FROM job_categories WHERE name = 'Administrasi'),
+(SELECT id FROM users WHERE email = 'manager@kerjakita.local'),
+(SELECT id FROM employees WHERE employee_code = 'EMP004'),
+'Buat konten promosi Instagram',
+'Membuat 3 desain konten untuk minggu ini',
+'medium',
+'review',
+6.00,
+6.00,
+'2026-09-01',
+'2026-09-03',
+NULL
+),
+(
+(SELECT id FROM job_categories WHERE name = 'Teknologi'),
+(SELECT id FROM users WHERE email = 'manager@kerjakita.local'),
+(SELECT id FROM employees WHERE employee_code = 'EMP005'),
+'Perbaiki bug halaman login',
+'Bug validasi email tidak muncul',
+'urgent',
+'completed',
+10.00,
+12.00,
+'2026-08-28',
+'2026-09-01',
+'2026-09-01 16:30:00'
+),
+(
+(SELECT id FROM job_categories WHERE name = 'Teknologi'),
+(SELECT id FROM users WHERE email = 'admin@kerjakita.local'),
+(SELECT id FROM employees WHERE employee_code = 'EMP006'),
+'Setup backup database mingguan',
+'Membuat script backup otomatis',
+'high',
+'not_started',
+5.00,
+0.00,
+'2026-09-03',
+'2026-09-07',
+NULL
+);
+
+-- =========================================================
+-- 6. TASK PROGRESS
+-- =========================================================
+INSERT INTO task_progress (
+task_id,
+employee_id,
+status,
+progress_percentage,
+notes,
+recorded_at
+)
+VALUES
+(
+(SELECT id FROM tasks WHERE title = 'Input data penjualan harian' LIMIT 1),
+(SELECT id FROM employees WHERE employee_code = 'EMP003'),
+'in_progress',
+50,
+'Data penjualan tanggal 1-2 sudah diinput',
+'2026-09-02 10:00:00'
+),
+(
+(SELECT id FROM tasks WHERE title = 'Buat konten promosi Instagram' LIMIT 1),
+(SELECT id FROM employees WHERE employee_code = 'EMP004'),
+'review',
+100,
+'Menunggu review manager',
+'2026-09-02 14:00:00'
+),
+(
+(SELECT id FROM tasks WHERE title = 'Perbaiki bug halaman login' LIMIT 1),
+(SELECT id FROM employees WHERE employee_code = 'EMP005'),
+'completed',
+100,
+'Bug sudah diperbaiki dan dites',
+'2026-09-01 16:30:00'
+),
+(
+(SELECT id FROM tasks WHERE title = 'Setup backup database mingguan' LIMIT 1),
+(SELECT id FROM employees WHERE employee_code = 'EMP006'),
+'not_started',
+0,
+'Belum mulai',
+'2026-09-03 08:00:00'
+);
+
+-- =========================================================
+-- 7. WORKLOAD RECORDS
+-- =========================================================
+INSERT INTO workload_records (
+employee_id,
+period_start,
+period_end,
+capacity_hours,
+assigned_hours,
+actual_hours,
+workload_percentage,
+status,
+notes
+)
+VALUES
+(
+(SELECT id FROM employees WHERE employee_code = 'EMP003'),
+'2026-09-01',
+'2026-09-30',
+160.00,
+120.00,
+80.00,
+75.00,
+'normal',
+'Beban kerja normal'
+),
+(
+(SELECT id FROM employees WHERE employee_code = 'EMP004'),
+'2026-09-01',
+'2026-09-30',
+160.00,
+180.00,
+150.00,
+112.50,
+'high',
+'Perlu penambahan tenaga'
+),
+(
+(SELECT id FROM employees WHERE employee_code = 'EMP005'),
+'2026-09-01',
+'2026-09-30',
+160.00,
+140.00,
+140.00,
+87.50,
+'normal',
+'Sesuai kapasitas'
+),
+(
+(SELECT id FROM employees WHERE employee_code = 'EMP006'),
+'2026-09-01',
+'2026-09-30',
+160.00,
+60.00,
+20.00,
+37.50,
+'underload',
+'Bisa ditambah tugas'
+);
+
+-- =========================================================
+-- 8. SALARIES
+-- net_salary otomatis dari generated column
+-- =========================================================
+INSERT INTO salaries (
+employee_id,
+period_month,
+period_year,
+basic_salary,
+overtime_amount,
+bonus_amount,
+deduction_amount,
+status,
+notes
+)
+VALUES
+(
+(SELECT id FROM employees WHERE employee_code = 'EMP003'),
+9,
+2026,
+4500000.00,
+0.00,
+250000.00,
+50000.00,
+'processed',
+'Gaji September 2026'
+),
+(
+(SELECT id FROM employees WHERE employee_code = 'EMP004'),
+9,
+2026,
+4500000.00,
+0.00,
+100000.00,
+0.00,
+'draft',
+'Menunggu approval'
+),
+(
+(SELECT id FROM employees WHERE employee_code = 'EMP005'),
+9,
+2026,
+5000000.00,
+150000.00,
+300000.00,
+100000.00,
+'paid',
+'Sudah ditransfer'
+),
+(
+(SELECT id FROM employees WHERE employee_code = 'EMP006'),
+9,
+2026,
+4000000.00,
+0.00,
+0.00,
+0.00,
+'draft',
+'Kontrak'
+);
+
+-- =========================================================
+-- 9. AUDIT LOGS
+-- =========================================================
+INSERT INTO audit_logs (
+user_id,
+action,
+table_name,
+record_id,
+description
+)
+VALUES
+(
+(SELECT id FROM users WHERE email = 'admin@kerjakita.local'),
+'INSERT',
+'users',
+(SELECT id FROM users WHERE email = 'admin@kerjakita.local'),
+'Menambahkan data admin dan dummy'
+),
+(
+(SELECT id FROM users WHERE email = 'manager@kerjakita.local'),
+'UPDATE',
+'tasks',
+(SELECT id FROM tasks WHERE title = 'Perbaiki bug halaman login' LIMIT 1),
+'Mengubah status task menjadi completed'
+);
+
+COMMIT;
