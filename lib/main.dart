@@ -13,6 +13,7 @@ import 'package:kita_kerja/screens/master_data_screen.dart';
 import 'package:kita_kerja/screens/pekerjaan_screen.dart';
 import 'package:kita_kerja/screens/profile_screen.dart';
 import 'package:kita_kerja/screens/register_screen.dart';
+import 'package:kita_kerja/screens/splash_screen.dart';
 import 'package:kita_kerja/screens/user_list_screen.dart';
 import 'package:kita_kerja/widgets/svg_transition.dart';
 import 'package:provider/provider.dart';
@@ -50,10 +51,14 @@ class MyApp extends StatelessWidget {
             prefixIconColor: Utils.border,
           ),
         ),
-        initialRoute: '/login',
+        initialRoute: '/',
         onGenerateRoute: (settings) {
           Widget page;
           switch (settings.name) {
+            case '/':
+            case '/splash':
+              page = const SplashScreen();
+              break;
             case '/login':
               page = const LoginScreen();
               break;

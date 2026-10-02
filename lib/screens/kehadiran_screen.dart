@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:kita_kerja/database/index.dart';
 import 'package:kita_kerja/layouts/main_layout.dart';
 import 'package:kita_kerja/lib/utils.dart';
+import 'package:kita_kerja/widgets/neo_components.dart';
 
 class KehadiranScreen extends StatefulWidget {
   const KehadiranScreen({super.key});
@@ -93,10 +94,11 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
     return MainLayout(
       title: 'Presensi & Kehadiran',
       activeMenu: 'kehadiran',
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Filter Bar
             Row(
@@ -166,128 +168,93 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
             const SizedBox(height: 20),
 
             // Attendances Table
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Utils.border, width: 2),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Utils.border,
-                      offset: Offset(4, 4),
-                      blurRadius: 0,
-                    ),
-                  ],
-                ),
-                child: _isLoading
-                    ? const Center(child: CircularProgressIndicator(color: Utils.primary))
-                    : filtered.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: const [
-                                Icon(Icons.event_busy, size: 48, color: Color(0xFF888888)),
-                                SizedBox(height: 12),
-                                Text('Tidak ada riwayat kehadiran ditemukan', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Utils.border)),
-                              ],
-                            ),
-                          )
-                        : SingleChildScrollView(
-                            child: Table(
-                              columnWidths: const {
-                                0: FlexColumnWidth(2.0),
-                                1: FlexColumnWidth(1.2),
-                                2: FlexColumnWidth(1.0),
-                                3: FlexColumnWidth(1.0),
-                                4: FlexColumnWidth(1.2),
-                                5: FlexColumnWidth(1.2),
-                                6: FlexColumnWidth(1.8),
-                              },
-                              border: const TableBorder(
-                                horizontalInside: BorderSide(color: Color(0xFFEEEEEE), width: 1),
-                              ),
-                              children: [
-                                TableRow(
-                                  decoration: const BoxDecoration(color: Color(0xFFF9F9F9)),
-                                  children: [
-                                    _buildHeaderCell('KARYAWAN'),
-                                    _buildHeaderCell('TANGGAL'),
-                                    _buildHeaderCell('MASUK'),
-                                    _buildHeaderCell('PULANG'),
-                                    _buildHeaderCell('JAM KERJA'),
-                                    _buildHeaderCell('STATUS'),
-                                    _buildHeaderCell('CATATAN'),
-                                  ],
-                                ),
-                                ...filtered.map((att) {
-                                  final st = att['status'].toString();
-                                  return TableRow(
-                                    children: [
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(att['employee_name'].toString(), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Utils.border)),
-                                            Text('${att['employee_code']} • ${att['department_name']}', style: const TextStyle(fontSize: 11, color: Color(0xFF666666))),
-                                          ],
-                                        ),
-                                      ),
-                                      _buildBodyCell(att['attendance_date'].toString()),
-                                      _buildBodyCell(att['clock_in'].toString()),
-                                      _buildBodyCell(att['clock_out'].toString()),
-                                      _buildBodyCell('${att['working_hours']} Jam'),
-                                      // Status Badge
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                                        child: Align(
-                                          alignment: Alignment.centerLeft,
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: _getStatusBg(st),
-                                              borderRadius: BorderRadius.circular(12),
-                                              border: Border.all(color: Utils.border, width: 1.5),
-                                            ),
-                                            child: Text(
-                                              _getStatusLabel(st),
-                                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: _getStatusText(st)),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      _buildBodyCell((att['notes'] ?? '-').toString()),
-                                    ],
-                                  );
-                                }),
-                              ],
+            NeoTable(
+                isLoading: _isLoading,
+                emptyIcon: Icons.event_busy,
+                emptyText: 'Tidak ada riwayat kehadiran ditemukan',
+                columnWidths: const {
+                  0: FlexColumnWidth(2.0),
+                  1: FlexColumnWidth(1.2),
+                  2: FlexColumnWidth(1.0),
+                  3: FlexColumnWidth(1.0),
+                  4: FlexColumnWidth(1.2),
+                  5: FlexColumnWidth(1.2),
+                  6: FlexColumnWidth(1.8),
+                },
+                headers: const [
+                  NeoTableHeaderCell('KARYAWAN'),
+                  NeoTableHeaderCell('TANGGAL'),
+                  NeoTableHeaderCell('MASUK'),
+                  NeoTableHeaderCell('PULANG'),
+                  NeoTableHeaderCell('JAM KERJA'),
+                  NeoTableHeaderCell('STATUS'),
+                  NeoTableHeaderCell('CATATAN'),
+                ],
+                rows: filtered.map((att) {
+                  final st = att['status'].toString();
+                  return [
+                    NeoTableCell(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            att['employee_name'].toString(),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: Utils.border,
                             ),
                           ),
+                          Text(
+                            '${att['employee_code']} • ${att['department_name']}',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF666666),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    NeoTableCell(text: att['attendance_date'].toString()),
+                    NeoTableCell(text: att['clock_in'].toString()),
+                    NeoTableCell(text: att['clock_out'].toString()),
+                    NeoTableCell(text: '${att['working_hours']} Jam'),
+                    NeoTableCell(
+                      child: Align(
+                        alignment: Alignment.center,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getStatusBg(st),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Utils.border,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Text(
+                            _getStatusLabel(st),
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: _getStatusText(st),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    NeoTableCell(text: (att['notes'] ?? '-').toString()),
+                  ];
+                }).toList(),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildHeaderCell(String label) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-      child: Text(
-        label,
-        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF666666), letterSpacing: 0.5),
-      ),
-    );
-  }
-
-  Widget _buildBodyCell(String content) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-      child: Text(
-        content,
-        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Utils.border),
       ),
     );
   }

@@ -243,13 +243,6 @@ class _KaryawanScreenState extends State<KaryawanScreen> {
     );
   }
 
-  String _formatRupiah(num amount) {
-    String str = amount.toInt().toString();
-    RegExp reg = RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))');
-    String formatted = str.replaceAllMapped(reg, (Match m) => '${m[1]}.');
-    return 'Rp $formatted';
-  }
-
   @override
   Widget build(BuildContext context) {
     final totalPages = (_totalKaryawan / _pageSize).ceil();
@@ -450,212 +443,136 @@ class _KaryawanScreenState extends State<KaryawanScreen> {
               const SizedBox(height: 16),
 
               // Karyawan Table
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Utils.border, width: 2),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Utils.border,
-                        offset: Offset(4, 4),
-                        blurRadius: 0,
-                      ),
-                    ],
-                  ),
-                  child: _isLoadingKaryawan
-                      ? const Center(
-                          child: CircularProgressIndicator(
-                            color: Utils.primary,
-                          ),
-                        )
-                      : _karyawanList.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
-                              Icon(
-                                Icons.person_off_outlined,
-                                size: 48,
-                                color: Color(0xFF888888),
-                              ),
-                              SizedBox(height: 12),
-                              Text(
-                                'Tidak ada data karyawan ditemukan',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: Utils.border,
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : SingleChildScrollView(
-                          child: Table(
-                            columnWidths: const {
-                              0: FlexColumnWidth(2.5),
-                              1: FlexColumnWidth(1.5),
-                              2: FlexColumnWidth(1.5),
-                              3: FlexColumnWidth(2.0),
-                              4: FlexColumnWidth(1.2),
-                              5: FlexColumnWidth(1.4),
-                            },
-                            border: const TableBorder(
-                              horizontalInside: BorderSide(
-                                color: Color(0xFFEEEEEE),
-                                width: 1,
-                              ),
+              NeoTable(
+                isLoading: _isLoadingKaryawan,
+                emptyIcon: Icons.person_off_outlined,
+                emptyText: 'Tidak ada data karyawan ditemukan',
+                columnWidths: const {
+                  0: FlexColumnWidth(2.5),
+                  1: FlexColumnWidth(1.5),
+                  2: FlexColumnWidth(1.5),
+                  3: FlexColumnWidth(2.0),
+                  4: FlexColumnWidth(1.2),
+                  5: FlexColumnWidth(1.4),
+                },
+                headers: const [
+                  NeoTableHeaderCell('NAMA & NIK'),
+                  NeoTableHeaderCell('JABATAN'),
+                  NeoTableHeaderCell('DEPARTEMEN'),
+                  NeoTableHeaderCell('JADWAL KERJA'),
+                  NeoTableHeaderCell('STATUS'),
+                  NeoTableHeaderCell('AKSI'),
+                ],
+                rows: _karyawanList.map((emp) {
+                  final isActive = emp['status'] == 'active';
+                  return [
+                    NeoTableCell(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            emp['full_name'].toString(),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: Utils.border,
                             ),
-                            children: [
-                              TableRow(
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFF9F9F9),
-                                ),
-                                children: [
-                                  _buildHeaderCell('NAMA & NIK'),
-                                  _buildHeaderCell('JABATAN'),
-                                  _buildHeaderCell('DEPARTEMEN'),
-                                  _buildHeaderCell('JADWAL KERJA'),
-                                  _buildHeaderCell('STATUS'),
-                                  _buildHeaderCell('AKSI'),
-                                ],
-                              ),
-                              ..._karyawanList.map((emp) {
-                                final isActive = emp['status'] == 'active';
-                                return TableRow(
-                                  children: [
-                                    // Nama & Code
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 12,
-                                        horizontal: 12,
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            emp['full_name'].toString(),
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w800,
-                                              color: Utils.border,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            '${emp['employee_code']} • ${emp['email'] ?? ''}',
-                                            style: const TextStyle(
-                                              fontSize: 11,
-                                              color: Color(0xFF666666),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    _buildBodyCell(
-                                      emp['position_name'].toString(),
-                                    ),
-                                    _buildBodyCell(
-                                      emp['department_name'].toString(),
-                                    ),
-                                    _buildBodyCell(
-                                      emp['work_schedule_name'].toString(),
-                                    ),
-                                    // Status
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 10,
-                                        horizontal: 8,
-                                      ),
-                                      child: Align(
-                                        alignment: Alignment.centerLeft,
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 10,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: isActive
-                                                ? const Color(0xFFE2F9E5)
-                                                : const Color(0xFFFFF0F0),
-                                            borderRadius: BorderRadius.circular(
-                                              12,
-                                            ),
-                                            border: Border.all(
-                                              color: Utils.border,
-                                              width: 1.5,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            isActive ? 'Aktif' : 'Nonaktif',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w800,
-                                              color: isActive
-                                                  ? const Color(0xFF1B7F2D)
-                                                  : Utils.danger,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    // Action buttons
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 8,
-                                        horizontal: 8,
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          IconButton(
-                                            icon: const Icon(
-                                              Icons.edit_outlined,
-                                              color: Utils.primary,
-                                              size: 20,
-                                            ),
-                                            tooltip: 'Sunting Data',
-                                            onPressed: () async {
-                                              final res = await Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      KaryawanFormScreen(
-                                                        employeeToEdit: emp,
-                                                      ),
-                                                ),
-                                              );
-                                              if (res == true) _loadKaryawan();
-                                            },
-                                          ),
-                                          IconButton(
-                                            icon: Icon(
-                                              isActive
-                                                  ? Icons.block
-                                                  : Icons.check_circle_outline,
-                                              color: isActive
-                                                  ? Utils.danger
-                                                  : Utils.success,
-                                              size: 20,
-                                            ),
-                                            tooltip: isActive
-                                                ? 'Nonaktifkan'
-                                                : 'Aktifkan',
-                                            onPressed: () =>
-                                                _handleToggleStatus(emp),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }),
-                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${emp['employee_code']} • ${emp['email'] ?? ''}',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF666666),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    NeoTableCell(text: emp['position_name'].toString()),
+                    NeoTableCell(text: emp['department_name'].toString()),
+                    NeoTableCell(text: emp['work_schedule_name'].toString()),
+                    NeoTableCell(
+                      child: Align(
+                        alignment: Alignment.center,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isActive
+                                ? const Color(0xFFE2F9E5)
+                                : const Color(0xFFFFF0F0),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Utils.border, width: 1.5),
+                          ),
+                          child: Text(
+                            isActive ? 'Aktif' : 'Nonaktif',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: isActive
+                                  ? const Color(0xFF1B7F2D)
+                                  : Utils.danger,
+                            ),
                           ),
                         ),
-                ),
+                      ),
+                    ),
+                    NeoTableCell(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        spacing: 6,
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Utils.secondary,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: IconButton(
+                              icon: const Icon(
+                                Icons.edit_outlined,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                              tooltip: 'Edit Data',
+                              onPressed: () async {
+                                final res = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        KaryawanFormScreen(employeeToEdit: emp),
+                                  ),
+                                );
+                                if (res == true) _loadKaryawan();
+                              },
+                            ),
+                          ),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: isActive ? Utils.danger : Utils.success,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: IconButton(
+                              icon: Icon(
+                                isActive
+                                    ? Icons.block
+                                    : Icons.check_circle_outline,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                              tooltip: isActive ? 'Nonaktifkan' : 'Aktifkan',
+                              onPressed: () => _handleToggleStatus(emp),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ];
+                }).toList(),
               ),
               const SizedBox(height: 12),
 
@@ -901,141 +818,77 @@ class _KaryawanScreenState extends State<KaryawanScreen> {
 
               // Salary Table
               Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Utils.border, width: 2),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Utils.border,
-                        offset: Offset(4, 4),
-                        blurRadius: 0,
-                      ),
-                    ],
-                  ),
-                  child: _isLoadingSalaries
-                      ? const Center(
-                          child: CircularProgressIndicator(
-                            color: Utils.primary,
-                          ),
-                        )
-                      : _salaryList.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: const [
-                              Icon(
-                                Icons.request_quote_outlined,
-                                size: 48,
-                                color: Color(0xFF888888),
-                              ),
-                              SizedBox(height: 12),
-                              Text(
-                                'Belum ada data rekap gaji untuk periode ini',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: Utils.border,
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : SingleChildScrollView(
-                          child: Table(
-                            columnWidths: const {
-                              0: FlexColumnWidth(2.2),
-                              1: FlexColumnWidth(1.2),
-                              2: FlexColumnWidth(1.5),
-                              3: FlexColumnWidth(1.3),
-                              4: FlexColumnWidth(1.3),
-                              5: FlexColumnWidth(1.3),
-                              6: FlexColumnWidth(1.6),
-                            },
-                            border: const TableBorder(
-                              horizontalInside: BorderSide(
-                                color: Color(0xFFEEEEEE),
-                                width: 1,
+                child: NeoTable(
+                  isLoading: _isLoadingSalaries,
+                  emptyIcon: Icons.request_quote_outlined,
+                  emptyText: 'Belum ada data rekap gaji untuk periode ini',
+                  columnWidths: const {
+                    0: FlexColumnWidth(2.2),
+                    1: FlexColumnWidth(1.2),
+                    2: FlexColumnWidth(1.5),
+                    3: FlexColumnWidth(1.3),
+                    4: FlexColumnWidth(1.3),
+                    5: FlexColumnWidth(1.3),
+                    6: FlexColumnWidth(1.6),
+                  },
+                  headers: const [
+                    NeoTableHeaderCell('NAMA KARYAWAN'),
+                    NeoTableHeaderCell('JENIS GAJI'),
+                    NeoTableHeaderCell('GAJI POKOK'),
+                    NeoTableHeaderCell('LEMBUR'),
+                    NeoTableHeaderCell('BONUS'),
+                    NeoTableHeaderCell('POTONGAN'),
+                    NeoTableHeaderCell('GAJI BERSIH'),
+                  ],
+                  rows: _salaryList.map((sal) {
+                    return [
+                      NeoTableCell(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              sal['employee_name'].toString(),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: Utils.border,
                               ),
                             ),
-                            children: [
-                              TableRow(
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFF9F9F9),
-                                ),
-                                children: [
-                                  _buildHeaderCell('NAMA KARYAWAN'),
-                                  _buildHeaderCell('JENIS GAJI'),
-                                  _buildHeaderCell('GAJI POKOK'),
-                                  _buildHeaderCell('LEMBUR'),
-                                  _buildHeaderCell('BONUS'),
-                                  _buildHeaderCell('POTONGAN'),
-                                  _buildHeaderCell('GAJI BERSIH'),
-                                ],
+                            Text(
+                              '${sal['employee_code']} • ${sal['department_name']}',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF666666),
                               ),
-                              ..._salaryList.map((sal) {
-                                return TableRow(
-                                  children: [
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 12,
-                                        horizontal: 12,
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            sal['employee_name'].toString(),
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w800,
-                                              color: Utils.border,
-                                            ),
-                                          ),
-                                          Text(
-                                            '${sal['employee_code']} • ${sal['department_name']}',
-                                            style: const TextStyle(
-                                              fontSize: 11,
-                                              color: Color(0xFF666666),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    _buildBodyCell(
-                                      sal['salary_type_name'].toString(),
-                                    ),
-                                    _buildBodyCell(
-                                      _formatRupiah(sal['basic_salary'] as num),
-                                    ),
-                                    _buildBodyCell(
-                                      _formatRupiah(
-                                        sal['overtime_amount'] as num,
-                                      ),
-                                    ),
-                                    _buildBodyCell(
-                                      _formatRupiah(sal['bonus_amount'] as num),
-                                    ),
-                                    _buildBodyCell(
-                                      _formatRupiah(
-                                        sal['deduction_amount'] as num,
-                                      ),
-                                      isDanger:
-                                          (sal['deduction_amount'] as num) > 0,
-                                    ),
-                                    _buildBodyCell(
-                                      _formatRupiah(sal['net_salary'] as num),
-                                      isBold: true,
-                                      isSuccess: true,
-                                    ),
-                                  ],
-                                );
-                              }),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
+                      ),
+                      NeoTableCell(text: sal['salary_type_name'].toString()),
+                      NeoTableCell(
+                        text: Utils.formatRupiah(sal['basic_salary'] as num),
+                      ),
+                      NeoTableCell(
+                        text: Utils.formatRupiah(sal['overtime_amount'] as num),
+                      ),
+                      NeoTableCell(
+                        text: Utils.formatRupiah(sal['bonus_amount'] as num),
+                      ),
+                      NeoTableCell(
+                        text: Utils.formatRupiah(
+                          sal['deduction_amount'] as num,
+                        ),
+                        isDanger: (sal['deduction_amount'] as num) > 0,
+                      ),
+                      NeoTableCell(
+                        text: Utils.formatRupiah(sal['net_salary'] as num),
+                        isBold: true,
+                        isSuccess: true,
+                      ),
+                    ];
+                  }).toList(),
                 ),
               ),
               const SizedBox(height: 16),
@@ -1118,7 +971,7 @@ class _KaryawanScreenState extends State<KaryawanScreen> {
                           ),
                         ),
                         Text(
-                          _formatRupiah(
+                          Utils.formatRupiah(
                             _salaryList.fold<num>(
                               0,
                               (sum, item) => sum + (item['net_salary'] as num),
@@ -1178,44 +1031,6 @@ class _KaryawanScreenState extends State<KaryawanScreen> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeaderCell(String label) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-          color: Color(0xFF666666),
-          letterSpacing: 0.5,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBodyCell(
-    String content, {
-    bool isBold = false,
-    bool isDanger = false,
-    bool isSuccess = false,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-      child: Text(
-        content,
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: isBold ? FontWeight.w800 : FontWeight.w500,
-          color: isDanger
-              ? Utils.danger
-              : isSuccess
-              ? const Color(0xFF1B7F2D)
-              : Utils.border,
         ),
       ),
     );

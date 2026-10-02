@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:kita_kerja/database/index.dart';
 import 'package:kita_kerja/layouts/main_layout.dart';
 import 'package:kita_kerja/lib/utils.dart';
+import 'package:kita_kerja/widgets/neo_components.dart';
 
 class PekerjaanScreen extends StatefulWidget {
   const PekerjaanScreen({super.key});
@@ -121,11 +122,12 @@ class _PekerjaanScreenState extends State<PekerjaanScreen> {
     return MainLayout(
       title: 'Manajemen Pekerjaan',
       activeMenu: 'pekerjaan',
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             // Controls Bar
             Row(
               children: [
@@ -217,249 +219,142 @@ class _PekerjaanScreenState extends State<PekerjaanScreen> {
             const SizedBox(height: 20),
 
             // Tasks Table
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Utils.border, width: 2),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Utils.border,
-                      offset: Offset(4, 4),
-                      blurRadius: 0,
-                    ),
-                  ],
-                ),
-                child: _isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(color: Utils.primary),
-                      )
-                    : filtered.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(
-                              Icons.assignment_turned_in_outlined,
-                              size: 48,
-                              color: Color(0xFF888888),
-                            ),
-                            SizedBox(height: 12),
-                            Text(
-                              'Tidak ada pekerjaan ditemukan',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: Utils.border,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : SingleChildScrollView(
-                        child: Table(
-                          columnWidths: const {
-                            0: FlexColumnWidth(2.5),
-                            1: FlexColumnWidth(1.2),
-                            2: FlexColumnWidth(1.6),
-                            3: FlexColumnWidth(1.1),
-                            4: FlexColumnWidth(1.2),
-                            5: FlexColumnWidth(1.4),
-                          },
-                          border: const TableBorder(
-                            horizontalInside: BorderSide(
-                              color: Color(0xFFEEEEEE),
-                              width: 1,
+            NeoTable(
+                isLoading: _isLoading,
+                emptyIcon: Icons.assignment_turned_in_outlined,
+                emptyText: 'Tidak ada pekerjaan ditemukan',
+                columnWidths: const {
+                  0: FlexColumnWidth(2.5),
+                  1: FlexColumnWidth(1.2),
+                  2: FlexColumnWidth(1.6),
+                  3: FlexColumnWidth(1.1),
+                  4: FlexColumnWidth(1.2),
+                  5: FlexColumnWidth(1.4),
+                },
+                headers: const [
+                  NeoTableHeaderCell('JUDUL TUGAS'),
+                  NeoTableHeaderCell('KATEGORI'),
+                  NeoTableHeaderCell('PENANGGUNG JAWAB'),
+                  NeoTableHeaderCell('PRIORITAS'),
+                  NeoTableHeaderCell('DEADLINE'),
+                  NeoTableHeaderCell('STATUS'),
+                ],
+                rows: filtered.map((task) {
+                  final priority = task['priority'].toString();
+                  final st = task['status'].toString();
+                  return [
+                    NeoTableCell(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            task['title'].toString(),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: Utils.border,
                             ),
                           ),
-                          children: [
-                            TableRow(
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFF9F9F9),
+                          if (task['description'].toString().isNotEmpty)
+                            Text(
+                              task['description'].toString(),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF666666),
                               ),
-                              children: [
-                                _buildHeaderCell('JUDUL TUGAS'),
-                                _buildHeaderCell('KATEGORI'),
-                                _buildHeaderCell('PENANGGUNG JAWAB'),
-                                _buildHeaderCell('PRIORITAS'),
-                                _buildHeaderCell('DEADLINE'),
-                                _buildHeaderCell('STATUS'),
-                              ],
                             ),
-                            ...filtered.map((task) {
-                              final priority = task['priority'].toString();
-                              final st = task['status'].toString();
-                              return TableRow(
-                                children: [
-                                  // Title & Description
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 12,
-                                      horizontal: 12,
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          task['title'].toString(),
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w800,
-                                            color: Utils.border,
-                                          ),
-                                        ),
-                                        if (task['description']
-                                            .toString()
-                                            .isNotEmpty)
-                                          Text(
-                                            task['description'].toString(),
-                                            style: const TextStyle(
-                                              fontSize: 11,
-                                              color: Color(0xFF666666),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                  _buildBodyCell(
-                                    task['category_name'].toString(),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 12,
-                                      horizontal: 12,
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          task['assigned_to_name'].toString(),
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w700,
-                                            color: Utils.border,
-                                          ),
-                                        ),
-                                        Text(
-                                          task['employee_code'].toString(),
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            color: Color(0xFF666666),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  // Priority Badge
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 10,
-                                      horizontal: 8,
-                                    ),
-                                    child: Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 3,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: _getPriorityBg(priority),
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                          border: Border.all(
-                                            color: Utils.border,
-                                            width: 1.5,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          priority.toUpperCase(),
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w800,
-                                            color: _getPriorityText(priority),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  _buildBodyCell(task['deadline'].toString()),
-                                  // Status Badge
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 10,
-                                      horizontal: 8,
-                                    ),
-                                    child: Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: _getStatusBg(st),
-                                          borderRadius: BorderRadius.circular(
-                                            14,
-                                          ),
-                                          border: Border.all(
-                                            color: Utils.border,
-                                            width: 1.5,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          _getStatusLabel(st),
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w800,
-                                            color: _getStatusText(st),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              );
-                            }),
-                          ],
+                        ],
+                      ),
+                    ),
+                    NeoTableCell(text: task['category_name'].toString()),
+                    NeoTableCell(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            task['assigned_to_name'].toString(),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Utils.border,
+                            ),
+                          ),
+                          Text(
+                            task['employee_code'].toString(),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF666666),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Priority Badge
+                    NeoTableCell(
+                      child: Align(
+                        alignment: Alignment.center,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getPriorityBg(priority),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: Utils.border,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Text(
+                            priority.toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: _getPriorityText(priority),
+                            ),
+                          ),
                         ),
                       ),
+                    ),
+                    NeoTableCell(text: task['deadline'].toString()),
+                    // Status Badge
+                    NeoTableCell(
+                      child: Align(
+                        alignment: Alignment.center,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: _getStatusBg(st),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: Utils.border,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Text(
+                            _getStatusLabel(st),
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: _getStatusText(st),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ];
+                }).toList(),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeaderCell(String label) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-          color: Color(0xFF666666),
-          letterSpacing: 0.5,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBodyCell(String content) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-      child: Text(
-        content,
-        style: const TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
-          color: Utils.border,
+            ],
+          ),
         ),
       ),
     );

@@ -40,6 +40,13 @@ class Utils {
   static const Color danger = Color(0xFFFF5A5F);
   static const Color mainBackground = Color(0xFFFFF4F4);
 
+  static String formatRupiah(num amount) {
+    String str = amount.toInt().toString();
+    RegExp reg = RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))');
+    String formatted = str.replaceAllMapped(reg, (Match m) => '${m[1]}.');
+    return 'Rp $formatted';
+  }
+
   static const focusBorder = OutlineInputBorder(
     borderRadius: BorderRadius.all(Radius.circular(8)),
     borderSide: BorderSide(color: primary),

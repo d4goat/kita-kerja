@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kita_kerja/layouts/main_layout.dart';
 import 'package:kita_kerja/lib/utils.dart';
+import 'package:kita_kerja/widgets/neo_components.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -320,57 +321,88 @@ class DashboardScreen extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        Table(
+                        NeoTable(
+                          showContainer: false,
                           columnWidths: const {
                             0: FlexColumnWidth(2),
                             1: FlexColumnWidth(1),
                             2: FlexColumnWidth(1.2),
                           },
-                          border: const TableBorder(
-                            horizontalInside: BorderSide(
-                              color: Color(0xFFEEEEEE),
-                              width: 1,
-                            ),
-                          ),
-                          children: [
-                            TableRow(
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFF9F9F9),
+                          headers: const [
+                            NeoTableHeaderCell('NAMA'),
+                            NeoTableHeaderCell('MASUK'),
+                            NeoTableHeaderCell('PULANG'),
+                          ],
+                          rows: [
+                            [
+                              NeoTableCell(
+                                text: 'Budi Santoso',
+                                isBold: true,
                               ),
-                              children: [
-                                _buildTableCell('NAMA', isHeader: true),
-                                _buildTableCell('MASUK', isHeader: true),
-                                _buildTableCell('PULANG', isHeader: true),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                _buildTableCell('Budi Santoso', isBold: true),
-                                _buildTableCell('07:02'),
-                                _buildTableCellWithBadge('17:10', 'LEMBUR'),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                _buildTableCell('Lestari Ayu', isBold: true),
-                                _buildTableCell('06:58'),
-                                _buildTableCell('15:01'),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                _buildTableCell('Rina Marlina', isBold: true),
-                                _buildTableCell('07:15'),
-                                _buildTableCell('15:05'),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                _buildTableCell('Dimas Pratama', isBold: true),
-                                _buildTableCell('11:55'),
-                                _buildTableCell('-'),
-                              ],
-                            ),
+                              NeoTableCell(text: '07:02'),
+                              NeoTableCell(
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Text(
+                                      '17:10',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                        color: Utils.border,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Utils.secondary,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                          color: Utils.border,
+                                          width: 1,
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        'LEMBUR',
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w900,
+                                          color: Utils.border,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            [
+                              NeoTableCell(
+                                text: 'Lestari Ayu',
+                                isBold: true,
+                              ),
+                              NeoTableCell(text: '06:58'),
+                              NeoTableCell(text: '15:01'),
+                            ],
+                            [
+                              NeoTableCell(
+                                text: 'Rina Marlina',
+                                isBold: true,
+                              ),
+                              NeoTableCell(text: '07:15'),
+                              NeoTableCell(text: '15:05'),
+                            ],
+                            [
+                              NeoTableCell(
+                                text: 'Dimas Pratama',
+                                isBold: true,
+                              ),
+                              NeoTableCell(text: '11:55'),
+                              NeoTableCell(text: '-'),
+                            ],
                           ],
                         ),
                       ],
@@ -443,77 +475,240 @@ class DashboardScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  Table(
+                  NeoTable(
+                    showContainer: false,
                     columnWidths: const {
                       0: FlexColumnWidth(2.5),
                       1: FlexColumnWidth(1.5),
                       2: FlexColumnWidth(1.5),
                       3: FlexColumnWidth(1.5),
                     },
-                    border: const TableBorder(
-                      horizontalInside: BorderSide(
-                        color: Color(0xFFEEEEEE),
-                        width: 1,
-                      ),
-                    ),
-                    children: [
-                      TableRow(
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFF9F9F9),
+                    headers: const [
+                      NeoTableHeaderCell('TUGAS'),
+                      NeoTableHeaderCell('PENANGGUNG JAWAB'),
+                      NeoTableHeaderCell('DEADLINE'),
+                      NeoTableHeaderCell('STATUS'),
+                    ],
+                    rows: [
+                      [
+                        NeoTableCell(
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: Colors.blue,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              const Expanded(
+                                child: Text(
+                                  'Produksi roti tawar 200 pcs',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: Utils.border,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        children: [
-                          _buildTableCell('TUGAS', isHeader: true),
-                          _buildTableCell('PENANGGUNG JAWAB', isHeader: true),
-                          _buildTableCell('DEADLINE', isHeader: true),
-                          _buildTableCell('STATUS', isHeader: true),
-                        ],
-                      ),
-                      TableRow(
-                        children: [
-                          _buildTaskTableCell(
-                            'Produksi roti tawar 200 pcs',
-                            Colors.blue,
+                        NeoTableCell(text: 'Budi Santoso'),
+                        NeoTableCell(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.calendar_today_outlined,
+                                size: 14,
+                                color: Utils.danger,
+                              ),
+                              const SizedBox(width: 6),
+                              const Text(
+                                '21 Sep 2026',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Utils.border,
+                                ),
+                              ),
+                            ],
                           ),
-                          _buildTableCell('Budi Santoso'),
-                          _buildDateCell('21 Sep 2026'),
-                          _buildStatusBadge(
-                            'SEDANG DIKERJAKAN',
-                            Utils.primary,
-                            Colors.white,
+                        ),
+                        NeoTableCell(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Utils.primary,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: Utils.border,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: const Text(
+                              'SEDANG DIKERJAKAN',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
-                        ],
-                      ),
-                      TableRow(
-                        children: [
-                          _buildTaskTableCell(
-                            'Pengemasan pesanan katering',
-                            Colors.grey,
+                        ),
+                      ],
+                      [
+                        NeoTableCell(
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: Colors.grey,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              const Expanded(
+                                child: Text(
+                                  'Pengemasan pesanan katering',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: Utils.border,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          _buildTableCell('Lestari Ayu'),
-                          _buildDateCell('21 Sep 2026'),
-                          _buildStatusBadge(
-                            'BELUM MULAI',
-                            Colors.white,
-                            Utils.border,
-                            isOutline: true,
+                        ),
+                        NeoTableCell(text: 'Lestari Ayu'),
+                        NeoTableCell(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.calendar_today_outlined,
+                                size: 14,
+                                color: Utils.danger,
+                              ),
+                              const SizedBox(width: 6),
+                              const Text(
+                                '21 Sep 2026',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Utils.border,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      TableRow(
-                        children: [
-                          _buildTaskTableCell(
-                            'Pengiriman pesanan toko',
-                            Utils.secondary,
+                        ),
+                        NeoTableCell(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: Utils.border,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: const Text(
+                              'BELUM MULAI',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: Utils.border,
+                              ),
+                            ),
                           ),
-                          _buildTableCell('Dimas Pratama'),
-                          _buildDateCell('22 Sep 2026'),
-                          _buildStatusBadge(
-                            'DITINJAU',
-                            Utils.secondary,
-                            Utils.border,
+                        ),
+                      ],
+                      [
+                        NeoTableCell(
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: Utils.secondary,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              const Expanded(
+                                child: Text(
+                                  'Pengiriman pesanan toko',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: Utils.border,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                        NeoTableCell(text: 'Dimas Pratama'),
+                        NeoTableCell(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.calendar_today_outlined,
+                                size: 14,
+                                color: Utils.danger,
+                              ),
+                              const SizedBox(width: 6),
+                              const Text(
+                                '22 Sep 2026',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Utils.border,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        NeoTableCell(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Utils.secondary,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: Utils.border,
+                                width: 1.5,
+                              ),
+                            ),
+                            child: const Text(
+                              'DITINJAU',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: Utils.border,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ],
@@ -684,144 +879,6 @@ class DashboardScreen extends StatelessWidget {
           },
         ),
       ],
-    );
-  }
-
-  Widget _buildTableCell(
-    String text, {
-    bool isHeader = false,
-    bool isBold = false,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: isHeader ? 11 : 13,
-          fontWeight: isHeader
-              ? FontWeight.w800
-              : isBold
-              ? FontWeight.w700
-              : FontWeight.w500,
-          color: isHeader ? const Color(0xFF666666) : Utils.border,
-          letterSpacing: isHeader ? 0.5 : 0,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTableCellWithBadge(String text, String badge) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-      child: Row(
-        children: [
-          Text(
-            text,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: Utils.border,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: Utils.secondary,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Utils.border, width: 1),
-            ),
-            child: Text(
-              badge,
-              style: const TextStyle(
-                fontSize: 9,
-                fontWeight: FontWeight.w900,
-                color: Utils.border,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTaskTableCell(String text, Color dotColor) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: Utils.border,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDateCell(String date) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.calendar_today_outlined,
-            size: 14,
-            color: Utils.danger,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            date,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Utils.border,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusBadge(
-    String text,
-    Color bg,
-    Color textCol, {
-    bool isOutline = false,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Utils.border, width: 1.5),
-          ),
-          child: Text(
-            text,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-              color: textCol,
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

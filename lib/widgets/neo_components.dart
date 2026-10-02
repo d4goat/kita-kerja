@@ -275,3 +275,193 @@ class NeoCheckbox extends StatelessWidget {
     );
   }
 }
+
+class NeoTableHeaderCell extends StatelessWidget {
+  final String label;
+  final Alignment alignment;
+  final EdgeInsetsGeometry padding;
+
+  const NeoTableHeaderCell(
+    this.label, {
+    super.key,
+    this.alignment = Alignment.center,
+    this.padding = const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: padding,
+      child: Align(
+        alignment: alignment,
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF666666),
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class NeoTableCell extends StatelessWidget {
+  final Widget? child;
+  final String? text;
+  final bool isBold;
+  final bool isDanger;
+  final bool isSuccess;
+  final Alignment alignment;
+  final EdgeInsetsGeometry padding;
+
+  const NeoTableCell({
+    super.key,
+    this.child,
+    this.text,
+    this.isBold = false,
+    this.isDanger = false,
+    this.isSuccess = false,
+    this.alignment = Alignment.center,
+    this.padding = const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: padding,
+      child: Align(
+        alignment: alignment,
+        child:
+            child ??
+            Text(
+              text ?? '',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isBold ? FontWeight.w800 : FontWeight.w500,
+                color: isDanger
+                    ? Utils.danger
+                    : isSuccess
+                    ? const Color(0xFF1B7F2D)
+                    : Utils.border,
+              ),
+            ),
+      ),
+    );
+  }
+}
+
+class NeoTable extends StatelessWidget {
+  final List<Widget> headers;
+  final List<List<Widget>> rows;
+  final Map<int, TableColumnWidth>? columnWidths;
+  final bool isLoading;
+  final Widget? emptyWidget;
+  final String emptyText;
+  final IconData emptyIcon;
+  final Color headerBackgroundColor;
+  final bool showVerticalBorders;
+  final bool showHorizontalBorders;
+  final BorderSide? verticalBorder;
+  final BorderSide? horizontalBorder;
+  final bool showContainer;
+
+  const NeoTable({
+    super.key,
+    required this.headers,
+    required this.rows,
+    this.columnWidths,
+    this.isLoading = false,
+    this.emptyWidget,
+    this.emptyText = 'Tidak ada data ditemukan',
+    this.emptyIcon = Icons.inbox_outlined,
+    this.headerBackgroundColor = const Color(0xFFF9F9F9),
+    this.showVerticalBorders = true,
+    this.showHorizontalBorders = true,
+    this.verticalBorder,
+    this.horizontalBorder,
+    this.showContainer = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveVerticalBorder = showVerticalBorders
+        ? (verticalBorder ?? const BorderSide(color: Utils.border, width: 1.5))
+        : BorderSide.none;
+
+    final effectiveHorizontalBorder = showHorizontalBorders
+        ? (horizontalBorder ??
+              const BorderSide(color: Utils.border, width: 1.5))
+        : BorderSide.none;
+
+    final Widget content = isLoading
+        ? const Padding(
+            padding: EdgeInsets.all(40),
+            child: Center(
+              child: CircularProgressIndicator(color: Utils.primary),
+            ),
+          )
+        : rows.isEmpty
+        ? Padding(
+            padding: const EdgeInsets.all(40),
+            child:
+                emptyWidget ??
+                Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(emptyIcon, size: 48, color: const Color(0xFF888888)),
+                      const SizedBox(height: 12),
+                      Text(
+                        emptyText,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Utils.border,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+          )
+        : Table(
+            defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+            columnWidths: columnWidths,
+            border: TableBorder(
+              horizontalInside: effectiveHorizontalBorder,
+              verticalInside: effectiveVerticalBorder,
+            ),
+            children: [
+              TableRow(
+                decoration: BoxDecoration(
+                  color: headerBackgroundColor,
+                  border: const Border(
+                    bottom: BorderSide(color: Utils.border, width: 2),
+                  ),
+                ),
+                children: headers,
+              ),
+              ...rows.map((rowCells) {
+                return TableRow(children: rowCells);
+              }),
+            ],
+          );
+
+    if (!showContainer) return content;
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Utils.border, width: 2),
+        boxShadow: const [
+          BoxShadow(color: Utils.border, offset: Offset(4, 4), blurRadius: 0),
+        ],
+      ),
+      child: ClipRRect(borderRadius: BorderRadius.circular(8), child: content),
+    );
+  }
+}

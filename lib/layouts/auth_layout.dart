@@ -32,16 +32,19 @@ class AuthLayout extends StatelessWidget {
                     ),
                     Utils.mediumSpace,
                     Text(
-                      'Selamat Datang di Kerja Kita',
+                      title.toLowerCase().contains('forgot')
+                          ? 'Reset password kerja kita anda untuk login kembali'
+                          : 'Selamat Datang di Kerja Kita',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 40,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
+                        letterSpacing: -1,
                       ),
                     ),
                     Text(
-                      'Kelola tenaga kerja perusahaan anda dengan mudah dan sistematis',
+                      title.toLowerCase().contains('forgot') ? "" : 'Kelola tenaga kerja perusahaan anda dengan mudah dan sistematis',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 18,

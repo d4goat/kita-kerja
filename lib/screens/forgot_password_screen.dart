@@ -58,7 +58,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  'Masukkan email akun Anda. Kami akan kirim tautan reset.',
+                  'Jangan khawatir, kami akan kirimkan anda email untuk reset password',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w400,
