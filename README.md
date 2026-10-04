@@ -100,7 +100,7 @@ Data Master ──> Karyawan ──> Pekerjaan + Kehadiran ──> Beban Kerja �
 
    ```bash
    git clone https://github.com/d4goat/kita-kerja
-   cd kita_kerja
+   cd kita-kerja
    ```
 
 2. **Install dependensi**:
