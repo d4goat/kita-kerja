@@ -59,19 +59,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
       setState(() => _isLoading = false);
 
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Pendaftaran akun Owner berhasil! Silakan masuk.'),
-            backgroundColor: Utils.success,
-          ),
+        Utils.toast(
+          context,
+          'Pendaftaran akun Owner berhasil! SIlahkan masuk.',
+          ToastificationType.success,
+          Icons.check,
+          Utils.success,
         );
         Navigator.pushReplacementNamed(context, '/login');
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Gagal mendaftarkan akun. Silakan coba lagi.'),
-            backgroundColor: Utils.danger,
-          ),
+        Utils.toast(
+          context,
+          'Gagal mendaftarkan akun. Silahkan coba lagi.',
+          ToastificationType.error,
+          Icons.close,
+          Utils.danger,
         );
       }
     }

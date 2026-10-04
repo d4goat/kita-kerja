@@ -16,7 +16,6 @@ class _MasterDataScreenState extends State<MasterDataScreen> {
 
   int _selectedTabIndex = 0; // 0: Jabatan, 1: Departemen, 2: Kategori Pekerjaan, 3: Jenis Gaji, 4: Jadwal Kerja
   String _searchQuery = '';
-  bool _showSqlQueryInspector = true;
   bool _isLoading = false;
 
   List<Map<String, dynamic>> _dataList = [];
@@ -82,14 +81,6 @@ class _MasterDataScreenState extends State<MasterDataScreen> {
     });
   }
 
-  String _getSelectSqlQuery() {
-    final tableName = _tabs[_selectedTabIndex]['table'];
-    if (_selectedTabIndex == 4) {
-      return 'SELECT id, name, start_time, end_time, break_minutes, working_hours, status FROM $tableName ORDER BY id ASC;';
-    }
-    return 'SELECT id, name, description, status FROM $tableName ORDER BY id ASC;';
-  }
-
   void _showAddEditDialog({Map<String, dynamic>? editItem}) {
     final isEdit = editItem != null;
     final nameController = TextEditingController(
@@ -116,7 +107,6 @@ class _MasterDataScreenState extends State<MasterDataScreen> {
     String status = isEdit ? editItem['status'].toString() : 'active';
 
     final tabTitle = _tabs[_selectedTabIndex]['title'];
-    final tableName = _tabs[_selectedTabIndex]['table'];
 
     showDialog(
       context: context,
@@ -143,26 +133,6 @@ class _MasterDataScreenState extends State<MasterDataScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // SQL Query Hint Badge
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(10),
-                        margin: const EdgeInsets.only(bottom: 16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1E1E1E),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          isEdit
-                              ? '-- SQL Query Update:\nUPDATE $tableName SET name=?, description=?, status=? WHERE id=${editItem['id']};'
-                              : '-- SQL Query Insert:\nINSERT INTO $tableName (name, description, status) VALUES (?, ?, "active");',
-                          style: const TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 11,
-                            color: Color(0xFF4EC9B0),
-                          ),
-                        ),
-                      ),
                       NeoTextField(
                         label: 'Nama $tabTitle',
                         placeholder: 'Masukkan nama',
@@ -413,7 +383,6 @@ class _MasterDataScreenState extends State<MasterDataScreen> {
     final currentStatus = item['status'].toString();
     final id = item['id'];
     final name = item['name'];
-    final tableName = _tabs[_selectedTabIndex]['table'];
 
     final actionLabel = currentStatus == 'active' ? 'nonaktifkan' : 'aktifkan';
 
@@ -434,7 +403,7 @@ class _MasterDataScreenState extends State<MasterDataScreen> {
             ),
           ),
           content: Text(
-            'Sesuai aturan PRD 6.8 & 9, data master sebaiknya dinonaktifkan (soft delete) bukan dihapus permanen.\n\nApakah Anda yakin ingin me-$actionLabel "$name"?\n\nSQL Query:\nUPDATE $tableName SET status=\'${currentStatus == 'active' ? 'inactive' : 'active'}\' WHERE id=$id;',
+            'Apakah Anda yakin ingin me-$actionLabel "$name"?\n data yang di nonaktifkan tidak akan di hapus secara permanen, anda bisa mengaktifkan-nya kembali nanti.',
             style: const TextStyle(fontSize: 13, color: Utils.border),
           ),
           actions: [
@@ -629,122 +598,10 @@ class _MasterDataScreenState extends State<MasterDataScreen> {
                       ],
                     ),
                   ),
-                  TextButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        _showSqlQueryInspector = !_showSqlQueryInspector;
-                      });
-                    },
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      backgroundColor: const Color(0xFFF0F0F0),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(6),
-                        side: const BorderSide(color: Utils.border, width: 1.5),
-                      ),
-                    ),
-                    icon: Icon(
-                      _showSqlQueryInspector ? Icons.code_off : Icons.code,
-                      size: 16,
-                      color: Utils.border,
-                    ),
-                    label: Text(
-                      _showSqlQueryInspector
-                          ? 'Sembunyikan SQL'
-                          : 'Lihat SQL Query',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Utils.border,
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
             const SizedBox(height: 16),
-
-            // 3. SQL QUERY INSPECTOR BOX (If enabled)
-            if (_showSqlQueryInspector) ...[
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1E1E1E),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Utils.border, width: 2),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Utils.border,
-                      offset: Offset(3, 3),
-                      blurRadius: 0,
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: const [
-                            Icon(
-                              Icons.terminal,
-                              color: Color(0xFF4EC9B0),
-                              size: 18,
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              'MySQL 8.x Query Executed (kerjakita database)',
-                              style: TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFFDCDCDC),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF2D2D2D),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Text(
-                            'Best Practice Parameterized Query',
-                            style: TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 10,
-                              color: Color(0xFFCE9178),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    SelectableText(
-                      _getSelectSqlQuery(),
-                      style: const TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFFDCDCDC),
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
 
             // 4. ACTION BAR (Search Input + Tambah Data Button)
             Row(
@@ -850,6 +707,13 @@ class _MasterDataScreenState extends State<MasterDataScreen> {
                               : const Color(0xFFFFF0F0),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: Utils.border, width: 1.5),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Utils.border,
+                              blurRadius: 0,
+                              offset: Offset(2, 2),
+                            ),
+                          ],
                         ),
                         child: Text(
                           isActive ? 'Aktif' : 'Nonaktif',
@@ -867,28 +731,59 @@ class _MasterDataScreenState extends State<MasterDataScreen> {
                   NeoTableCell(
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
+                      spacing: 6,
                       children: [
                         // Edit Button
-                        IconButton(
-                          icon: const Icon(
-                            Icons.edit_outlined,
-                            color: Utils.primary,
-                            size: 20,
+                        Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(width: 2, color: Colors.black),
+                            borderRadius: BorderRadius.circular(10),
+                            color: Utils.secondary,
+                            boxShadow: const [
+                              BoxShadow(
+                                blurRadius: 0,
+                                color: Utils.border,
+                                offset: Offset(3, 3),
+                              ),
+                            ],
                           ),
-                          tooltip: 'Ubah Data',
-                          onPressed: () => _showAddEditDialog(editItem: item),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.edit_outlined,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                            tooltip: 'Ubah Data',
+                            onPressed: () => _showAddEditDialog(editItem: item),
+                          ),
                         ),
                         // Toggle Status Button (Soft Delete)
-                        IconButton(
-                          icon: Icon(
-                            isActive ? Icons.block : Icons.check_circle_outline,
+                        Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(width: 2, color: Colors.black),
+                            borderRadius: BorderRadius.circular(10),
                             color: isActive ? Utils.danger : Utils.success,
-                            size: 20,
+                            boxShadow: const [
+                              BoxShadow(
+                                blurRadius: 0,
+                                color: Utils.border,
+                                offset: Offset(3, 3),
+                              ),
+                            ],
                           ),
-                          tooltip: isActive
-                              ? 'Nonaktifkan (Soft Delete)'
-                              : 'Aktifkan kembali',
-                          onPressed: () => _handleToggleStatus(item),
+                          child: IconButton(
+                            icon: Icon(
+                              isActive
+                                  ? Icons.block
+                                  : Icons.check_circle_outline,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                            tooltip: isActive
+                                ? 'Nonaktifkan (Soft Delete)'
+                                : 'Aktifkan kembali',
+                            onPressed: () => _handleToggleStatus(item),
+                          ),
                         ),
                       ],
                     ),

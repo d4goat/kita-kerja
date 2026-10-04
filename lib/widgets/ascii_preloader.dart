@@ -18,43 +18,46 @@ String rotateRight(String s, int steps) {
   return s.substring(n - shift) + s.substring(0, n - shift);
 }
 
-/// Widget wrapper preloader teks ASCII dengan cross-fade transition:
-/// Preloader melakukan Fade-Out sementara halaman aplikasi melakukan Fade-In.
+/// Kurva transisi premium ala Framer Motion (CURVE_EASE: [0.76, 0, 0.24, 1])
+const Curve curveEase = Cubic(0.76, 0.0, 0.24, 1.0);
+
+/// Widget wrapper preloader teks ASCII dengan animasi exit slide-up dan bottom curve
+/// terinspirasi dari preloader modern Next.js / Framer Motion.
 class AsciiPreloader extends StatefulWidget {
   /// Widget halaman utama / aplikasi yang berada di bawah preloader overlay.
   final Widget? child;
 
-  /// Pola dasar ASCII tetap 10 karakter (default: "=++==-----").
+  /// Pola dasar ASCII tetap (default: "=++==-+==--").
   final String pattern;
 
-  /// Fungsi asynchronous untuk pekerjaan inisialisasi nyata (mis. fetch token, DB, aset).
+  /// Fungsi asynchronous untuk inisialisasi awal (mis. fetch token, koneksi DB, preload).
   final Future<void> Function()? onLoad;
 
-  /// Callback yang dipanggil setelah animasi fade transition selesai.
+  /// Callback yang dipanggil setelah animasi exit preloader selesai seutuhnya.
   final VoidCallback? onFinished;
 
-  /// Durasi minimum preloader tampil agar animasi tidak terpotong (default 1.5 detik).
+  /// Durasi minimum preloader tampil agar animasi tidak terpotong (default 2.0 detik).
   final Duration minDuration;
 
-  /// Jeda diam pada frame akhir sebelum fade dimulai (default 200 ms).
+  /// Jeda diam pada frame akhir sebelum animasi exit dimulai (default 300 ms).
   final Duration exitPauseDuration;
 
-  /// Durasi animasi cross-fade saat transisi keluar (default 600 ms).
-  final Duration fadeDuration;
+  /// Durasi total animasi exit slide-up (default 850 ms).
+  final Duration exitDuration;
 
-  /// Kurva animasi cross-fade (default Curves.easeInOut).
-  final Curve fadeCurve;
+  /// Alias untuk [exitDuration] (backward compatibility).
+  Duration get fadeDuration => exitDuration;
 
   /// Callback penanganan error saat [onLoad] gagal agar tidak macet di preloader.
   final void Function(Object error, StackTrace stackTrace)? onError;
 
-  /// Interval perpindahan frame animasi (default 100 ms / ~10 fps, rentang 80-120 ms).
+  /// Interval perpindahan frame rotasi ASCII (default 75 ms).
   final Duration tickInterval;
 
   /// Ukuran font teks ASCII (default 22.0).
   final double fontSize;
 
-  /// Jarak antar karakter teks ASCII (default 2.0).
+  /// Jarak antar karakter teks ASCII (default -2.0).
   final double letterSpacing;
 
   /// Warna latar belakang preloader (default: light blue / primary tint).
@@ -69,17 +72,18 @@ class AsciiPreloader extends StatefulWidget {
     this.pattern = '=++==-+==--',
     this.onLoad,
     this.onFinished,
-    this.minDuration = const Duration(milliseconds: 1500),
-    this.exitPauseDuration = const Duration(milliseconds: 200),
-    this.fadeDuration = const Duration(milliseconds: 600),
-    this.fadeCurve = Curves.easeInOut,
+    this.minDuration = const Duration(milliseconds: 2000),
+    this.exitPauseDuration = const Duration(milliseconds: 300),
+    Duration? exitDuration,
+    Duration? fadeDuration,
     this.onError,
     this.tickInterval = const Duration(milliseconds: 75),
     this.fontSize = 22.0,
     this.letterSpacing = -2.0,
     this.backgroundColor,
     this.textColor,
-  });
+  }) : exitDuration =
+           exitDuration ?? fadeDuration ?? const Duration(milliseconds: 850);
 
   @override
   State<AsciiPreloader> createState() => _AsciiPreloaderState();
@@ -88,8 +92,20 @@ class AsciiPreloader extends StatefulWidget {
 class _AsciiPreloaderState extends State<AsciiPreloader>
     with SingleTickerProviderStateMixin {
   late final ValueNotifier<String> _frameNotifier;
-  late final AnimationController _fadeController;
-  late final Animation<double> _overlayFadeAnimation;
+  late final AnimationController _exitController;
+
+  // Animasi exit untuk teks loading (slide up singkat + fade out)
+  late final Animation<Offset> _textSlideAnimation;
+  late final Animation<double> _textFadeAnimation;
+
+  // Animasi exit untuk tirai preloader overlay (slide up ke atas penuh)
+  late final Animation<Offset> _curtainSlideAnimation;
+
+  // Animasi lengkungan elastis di bagian bawah tirai saat ditarik ke atas
+  late final Animation<double> _curveAnimation;
+
+  // Animasi enter untuk konten utama (child) yang tersingkap (slide up halus + fade in)
+  late final Animation<Offset> _childSlideAnimation;
   late final Animation<double> _childFadeAnimation;
 
   Timer? _rotationTimer;
@@ -101,23 +117,76 @@ class _AsciiPreloaderState extends State<AsciiPreloader>
   void initState() {
     super.initState();
 
-    // Inisialisasi frame pertama sesuai pattern
     _frameNotifier = ValueNotifier<String>(widget.pattern);
 
-    // Controller untuk animasi cross-fade exit
-    _fadeController = AnimationController(
+    _exitController = AnimationController(
       vsync: this,
-      duration: widget.fadeDuration,
+      duration: widget.exitDuration,
     );
 
-    // Overlay memudar dari 1.0 ke 0.0
-    _overlayFadeAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: widget.fadeCurve),
+    // 1. Teks ASCII: Slide up cepat (-60px setara Offset(0, -1.8)) & Fade Out di awal exit (0.0 -> 0.35)
+    _textSlideAnimation =
+        Tween<Offset>(begin: Offset.zero, end: const Offset(0.0, -1.8)).animate(
+          CurvedAnimation(
+            parent: _exitController,
+            curve: const Interval(0.0, 0.35, curve: curveEase),
+          ),
+        );
+
+    _textFadeAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _exitController,
+        curve: const Interval(0.0, 0.35, curve: Curves.easeOut),
+      ),
     );
 
-    // Konten aplikasi (child) muncul dari 0.0 ke 1.0
+    // 2. Tirai Preloader (Curtain): Meluncur ke atas (Offset(0, 0) -> Offset(0, -1.0)) setelah jeda singkat (0.15 -> 1.0)
+    _curtainSlideAnimation =
+        Tween<Offset>(begin: Offset.zero, end: const Offset(0.0, -1.0)).animate(
+          CurvedAnimation(
+            parent: _exitController,
+            curve: const Interval(0.15, 1.0, curve: curveEase),
+          ),
+        );
+
+    // 3. Lengkungan Bawah Tirai (Bottom Curve): mengembang dari 0 ke puncak lalu merata kembali saat slide selesai
+    _curveAnimation =
+        TweenSequence<double>([
+          TweenSequenceItem(
+            tween: Tween<double>(
+              begin: 0.0,
+              end: 1.0,
+            ).chain(CurveTween(curve: Curves.easeOutQuad)),
+            weight: 35.0,
+          ),
+          TweenSequenceItem(
+            tween: Tween<double>(
+              begin: 1.0,
+              end: 0.0,
+            ).chain(CurveTween(curve: Curves.easeInQuad)),
+            weight: 65.0,
+          ),
+        ]).animate(
+          CurvedAnimation(
+            parent: _exitController,
+            curve: const Interval(0.15, 0.95),
+          ),
+        );
+
+    // 4. Konten Utama (Child): Slide up lembut dari Offset(0, 0.06) ke Offset.zero & Fade-In berkesinambungan
+    _childSlideAnimation =
+        Tween<Offset>(begin: const Offset(0.0, 0.06), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _exitController,
+            curve: const Interval(0.20, 1.0, curve: Curves.easeOutCubic),
+          ),
+        );
+
     _childFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: widget.fadeCurve),
+      CurvedAnimation(
+        parent: _exitController,
+        curve: const Interval(0.15, 0.85, curve: Curves.easeIn),
+      ),
     );
 
     _startRotationTimer();
@@ -148,19 +217,19 @@ class _AsciiPreloaderState extends State<AsciiPreloader>
 
       if (_isDisposed) return;
 
-      // Hentikan timer rotasi (bekukan frame pada posisi saat ini)
+      // Hentikan rotasi string pada frame terakhir
       _rotationTimer?.cancel();
       _rotationTimer = null;
 
-      // Jeda diam sejenak pada frame terakhir
+      // Jeda diam sejenak sebelum exit
       if (widget.exitPauseDuration > Duration.zero) {
         await Future.delayed(widget.exitPauseDuration);
       }
 
       if (_isDisposed) return;
 
-      // Jalankan animasi Cross-Fade (Overlay Fade-Out + Child Fade-In)
-      await _fadeController.forward();
+      // Jalankan animasi exit slide-up
+      await _exitController.forward();
 
       if (!_isDisposed) {
         setState(() {
@@ -177,8 +246,8 @@ class _AsciiPreloaderState extends State<AsciiPreloader>
         widget.onError!(error, stackTrace);
       }
 
-      // Tetap jalankan fade transition agar aplikasi tidak freeze
-      await _fadeController.forward();
+      // Tetap jalankan exit transition agar tidak stuck
+      await _exitController.forward();
       if (!_isDisposed) {
         setState(() {
           _isFinished = true;
@@ -193,7 +262,7 @@ class _AsciiPreloaderState extends State<AsciiPreloader>
     _isDisposed = true;
     _rotationTimer?.cancel();
     _rotationTimer = null;
-    _fadeController.dispose();
+    _exitController.dispose();
     _frameNotifier.dispose();
     super.dispose();
   }
@@ -204,65 +273,127 @@ class _AsciiPreloaderState extends State<AsciiPreloader>
         widget.backgroundColor ?? const Color.fromARGB(255, 195, 210, 255);
     final txtColor = widget.textColor ?? Utils.primary;
 
-    final preloaderOverlay = Material(
-      type: MaterialType.transparency,
-      child: Container(
-        color: bgColor,
-        width: double.infinity,
-        height: double.infinity,
-        alignment: Alignment.center,
-        child: ValueListenableBuilder<String>(
-          valueListenable: _frameNotifier,
-          builder: (context, frameText, _) {
-            return Text(
-              frameText,
-              style: TextStyle(
-                fontFamily: 'monospace',
-                fontSize: widget.fontSize,
-                fontWeight: FontWeight.w600,
-                letterSpacing: widget.letterSpacing,
-                color: txtColor,
-                decoration: TextDecoration.none,
-                shadows: [
-                  Shadow(
-                    color: txtColor.withValues(alpha: 0.5),
-                    blurRadius: 10.0,
-                  ),
-                ],
+    // Overlay tirai preloader yang melakukan slide-up ke atas
+    final preloaderOverlay = SlideTransition(
+      position: _curtainSlideAnimation,
+      child: Stack(
+        clipBehavior: Clip.none,
+        fit: StackFit.expand,
+        children: [
+          // Background tirai utama
+          Container(
+            color: bgColor,
+            alignment: Alignment.center,
+            child: FadeTransition(
+              opacity: _textFadeAnimation,
+              child: SlideTransition(
+                position: _textSlideAnimation,
+                child: ValueListenableBuilder<String>(
+                  valueListenable: _frameNotifier,
+                  builder: (context, frameText, _) {
+                    return Text(
+                      frameText,
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: widget.fontSize,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: widget.letterSpacing,
+                        color: txtColor,
+                        decoration: TextDecoration.none,
+                        shadows: [
+                          Shadow(
+                            color: txtColor.withValues(alpha: 0.5),
+                            blurRadius: 10.0,
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
               ),
-            );
-          },
-        ),
+            ),
+          ),
+
+          // Lengkungan bawah tirai (Bottom curve saat ditarik ke atas)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: -140.0,
+            height: 140.0,
+            child: AnimatedBuilder(
+              animation: _curveAnimation,
+              builder: (context, _) {
+                final double currentCurveHeight = _curveAnimation.value * 140.0;
+                return CustomPaint(
+                  size: const Size(double.infinity, 140.0),
+                  painter: _CurvedBottomCurtainPainter(
+                    color: bgColor,
+                    curveHeight: currentCurveHeight,
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
 
     if (widget.child != null) {
       return Stack(
         fit: StackFit.expand,
+        clipBehavior: Clip.hardEdge,
         children: [
-          // Konten halaman aplikasi yang memudar masuk (Fade-In)
-          FadeTransition(
-            opacity: _isFinished
-                ? const AlwaysStoppedAnimation<double>(1.0)
-                : _childFadeAnimation,
-            child: widget.child!,
-          ),
-
-          // Overlay Preloader yang memudar keluar (Fade-Out)
-          if (!_isFinished)
+          // Konten halaman aplikasi utama (Enter animation: Slide Up halus + Fade In)
+          if (_isFinished)
+            widget.child!
+          else
             FadeTransition(
-              opacity: _overlayFadeAnimation,
-              child: preloaderOverlay,
+              opacity: _childFadeAnimation,
+              child: SlideTransition(
+                position: _childSlideAnimation,
+                child: widget.child!,
+              ),
             ),
+
+          // Overlay Preloader
+          if (!_isFinished) preloaderOverlay,
         ],
       );
     }
 
-    return _isFinished
-        ? const SizedBox.shrink()
-        : FadeTransition(
-            opacity: _overlayFadeAnimation,
-            child: preloaderOverlay,
-          );
+    return _isFinished ? const SizedBox.shrink() : preloaderOverlay;
+  }
+}
+
+/// CustomPainter untuk menggambar lengkungan di bawah tirai saat ditarik meluncur ke atas
+class _CurvedBottomCurtainPainter extends CustomPainter {
+  final Color color;
+  final double curveHeight;
+
+  const _CurvedBottomCurtainPainter({
+    required this.color,
+    required this.curveHeight,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (curveHeight <= 0.1) return;
+
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final path = Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width, 0)
+      ..quadraticBezierTo(size.width * 0.5, curveHeight, 0, 0)
+      ..close();
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _CurvedBottomCurtainPainter oldDelegate) {
+    return oldDelegate.color != color || oldDelegate.curveHeight != curveHeight;
   }
 }

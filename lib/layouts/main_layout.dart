@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kita_kerja/lib/utils.dart';
 import 'package:kita_kerja/models/auth_model.dart';
+import 'package:kita_kerja/widgets/smooth_scroll.dart';
 import 'package:provider/provider.dart';
 
 class MainLayout extends StatefulWidget {
@@ -22,16 +23,12 @@ class MainLayout extends StatefulWidget {
 }
 
 class _MainLayoutState extends State<MainLayout> {
-  bool _isPengaturanExpanded = false;
-
   @override
   void initState() {
     super.initState();
     if (widget.activeMenu == 'master_data' ||
         widget.activeMenu == 'profile' ||
-        widget.activeMenu == 'keamanan') {
-      _isPengaturanExpanded = true;
-    }
+        widget.activeMenu == 'keamanan') {}
   }
 
   void _navigateTo(String menu) {
@@ -226,38 +223,13 @@ class _MainLayoutState extends State<MainLayout> {
                         onTap: () => _navigateTo('pekerjaan'),
                       ),
                       const SizedBox(height: 8),
-                      _buildSidebarItem(
-                        icon: Icons.settings_outlined,
-                        label: 'Pengaturan',
-                        isActive:
-                            widget.activeMenu == 'pengaturan' ||
-                            widget.activeMenu == 'master_data' ||
-                            widget.activeMenu == 'profile',
-                        hasSubMenu: true,
-                        isExpanded: _isPengaturanExpanded,
-                        onTap: () {
-                          setState(() {
-                            _isPengaturanExpanded = !_isPengaturanExpanded;
-                          });
-                        },
-                      ),
-                      if (_isPengaturanExpanded) ...[
-                        const SizedBox(height: 6),
-                        _buildSubMenuItem(
-                          icon: Icons.person_outline,
-                          label: 'Profil',
-                          isActive: widget.activeMenu == 'profile',
-                          onTap: () => _navigateTo('profile'),
+                      if (userRole == 'ADMIN' || userRole == 'OWNER') ...[
+                        _buildSidebarItem(
+                          icon: Icons.settings_outlined,
+                          label: 'Data Master',
+                          isActive: widget.activeMenu == 'master_data',
+                          onTap: () => _navigateTo('master_data'),
                         ),
-                        if (userRole == 'ADMIN' || userRole == 'OWNER') ...[
-                          const SizedBox(height: 4),
-                          _buildSubMenuItem(
-                            icon: Icons.dataset_outlined,
-                            label: 'Data Master',
-                            isActive: widget.activeMenu == 'master_data',
-                            onTap: () => _navigateTo('master_data'),
-                          ),
-                        ],
                       ],
                     ],
                   ),
@@ -410,26 +382,6 @@ class _MainLayoutState extends State<MainLayout> {
                                   ],
                                 ),
                               ),
-                              if (userRole == 'ADMIN' || userRole == 'OWNER')
-                                PopupMenuItem(
-                                  value: 'master_data',
-                                  child: Row(
-                                    children: const [
-                                      Icon(
-                                        Icons.dataset_outlined,
-                                        color: Utils.border,
-                                        size: 20,
-                                      ),
-                                      SizedBox(width: 10),
-                                      Text(
-                                        'Data Master',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
                               const PopupMenuDivider(),
                               PopupMenuItem(
                                 value: 'logout',
@@ -497,7 +449,7 @@ class _MainLayoutState extends State<MainLayout> {
                   ),
                 ),
                 // Page Body Content
-                Expanded(child: widget.child),
+                Expanded(child: SmoothScrollWrapper(child: widget.child)),
               ],
             ),
           ),
@@ -558,49 +510,6 @@ class _MainLayoutState extends State<MainLayout> {
                   size: 20,
                 ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSubMenuItem({
-    required IconData icon,
-    required String label,
-    required bool isActive,
-    required VoidCallback onTap,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 20),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: isActive
-                  ? Utils.secondary.withAlpha(100)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(6),
-              border: isActive
-                  ? Border.all(color: Utils.border, width: 2)
-                  : null,
-            ),
-            child: Row(
-              children: [
-                Icon(icon, size: 18, color: Utils.border),
-                const SizedBox(width: 10),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
-                    color: Utils.border,
-                  ),
-                ),
-              ],
-            ),
           ),
         ),
       ),

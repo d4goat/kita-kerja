@@ -84,7 +84,8 @@ class MyApp extends StatelessWidget {
               page = const KaryawanScreen();
               break;
             case '/karyawan-form':
-              page = const KaryawanFormScreen();
+              final args = settings.arguments as Map<String, dynamic>?;
+              page = KaryawanFormScreen(employeeToEdit: args);
               break;
             case '/kehadiran':
               page = const KehadiranScreen();

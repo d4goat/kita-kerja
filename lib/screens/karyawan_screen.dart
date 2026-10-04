@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:kita_kerja/database/index.dart';
 import 'package:kita_kerja/layouts/main_layout.dart';
 import 'package:kita_kerja/lib/utils.dart';
-import 'package:kita_kerja/screens/karyawan_form_screen.dart';
 import 'package:kita_kerja/widgets/neo_components.dart';
+import 'package:toastification/toastification.dart';
 
 class KaryawanScreen extends StatefulWidget {
   const KaryawanScreen({super.key});
@@ -22,7 +22,7 @@ class _KaryawanScreenState extends State<KaryawanScreen> {
   int _selectedDepartmentId = 0; // 0 = All
   String _selectedStatus = 'all'; // all, active, inactive
   int _currentPage = 1;
-  final int _pageSize = 5;
+  final int _pageSize = 10;
 
   List<Map<String, dynamic>> _karyawanList = [];
   int _totalKaryawan = 0;
@@ -104,7 +104,7 @@ class _KaryawanScreenState extends State<KaryawanScreen> {
             ),
           ),
           content: Text(
-            'Apakah Anda yakin ingin me-$actionLabel karyawan "${item['full_name']}" (${item['employee_code']})?\n\nSesuai PRD 6.8 & 9, karyawan nonaktif tidak dapat login atau menerima tugas baru.',
+            'Apakah Anda yakin ingin me-$actionLabel karyawan "${item['full_name']}" (${item['employee_code']})?\n',
             style: const TextStyle(color: Utils.border),
           ),
           actions: [
@@ -127,13 +127,12 @@ class _KaryawanScreenState extends State<KaryawanScreen> {
                 );
                 _loadKaryawan();
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Status karyawan ${item['full_name']} berhasil diperbarui.',
-                    ),
-                    backgroundColor: Utils.success,
-                  ),
+                Utils.toast(
+                  context,
+                  'Status karyawan ${item['full_name']} berhasil diperbarui',
+                  ToastificationType.success,
+                  Icons.check,
+                  Utils.success,
                 );
               },
               style: ElevatedButton.styleFrom(
@@ -141,6 +140,7 @@ class _KaryawanScreenState extends State<KaryawanScreen> {
                     ? Utils.danger
                     : Utils.success,
                 foregroundColor: Colors.white,
+
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                   side: const BorderSide(color: Utils.border, width: 2),
@@ -194,13 +194,13 @@ class _KaryawanScreenState extends State<KaryawanScreen> {
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.pop(dialogContext);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Rekap Gaji berhasil diekspor ke format CSV!',
-                    ),
-                    backgroundColor: Utils.success,
-                  ),
+
+                Utils.toast(
+                  context,
+                  'Rekap Gaji berhasil diekspor ke format CSV!',
+                  ToastificationType.success,
+                  Icons.check,
+                  Utils.success,
                 );
               },
               style: ElevatedButton.styleFrom(
@@ -217,13 +217,12 @@ class _KaryawanScreenState extends State<KaryawanScreen> {
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.pop(dialogContext);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Rekap Gaji berhasil diekspor ke format PDF!',
-                    ),
-                    backgroundColor: Utils.success,
-                  ),
+                Utils.toast(
+                  context,
+                  'Rekap Gaji berhasil diekspor ke format PDF!',
+                  ToastificationType.success,
+                  Icons.check,
+                  Utils.success,
                 );
               },
               style: ElevatedButton.styleFrom(
@@ -426,11 +425,9 @@ class _KaryawanScreenState extends State<KaryawanScreen> {
                       text: '+ Tambah Karyawan',
                       backgroundColor: Utils.primary,
                       onPressed: () async {
-                        final result = await Navigator.push(
+                        final result = await Navigator.pushNamed(
                           context,
-                          MaterialPageRoute(
-                            builder: (context) => const KaryawanFormScreen(),
-                          ),
+                          '/karyawan-form',
                         );
                         if (result == true) {
                           _loadKaryawan();
@@ -531,6 +528,14 @@ class _KaryawanScreenState extends State<KaryawanScreen> {
                             decoration: BoxDecoration(
                               color: Utils.secondary,
                               borderRadius: BorderRadius.circular(10),
+                              border: Border.all(width: 2, color: Colors.black),
+                              boxShadow: const [
+                                BoxShadow(
+                                  blurRadius: 0,
+                                  offset: Offset(3, 3),
+                                  color: Utils.border,
+                                ),
+                              ],
                             ),
                             child: IconButton(
                               icon: const Icon(
@@ -540,12 +545,10 @@ class _KaryawanScreenState extends State<KaryawanScreen> {
                               ),
                               tooltip: 'Edit Data',
                               onPressed: () async {
-                                final res = await Navigator.push(
+                                final res = await Navigator.pushNamed(
                                   context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        KaryawanFormScreen(employeeToEdit: emp),
-                                  ),
+                                  '/karyawan-form',
+                                  arguments: emp,
                                 );
                                 if (res == true) _loadKaryawan();
                               },
@@ -555,6 +558,14 @@ class _KaryawanScreenState extends State<KaryawanScreen> {
                             decoration: BoxDecoration(
                               color: isActive ? Utils.danger : Utils.success,
                               borderRadius: BorderRadius.circular(10),
+                              border: Border.all(width: 2, color: Utils.border),
+                              boxShadow: const [
+                                BoxShadow(
+                                  blurRadius: 0,
+                                  color: Utils.border,
+                                  offset: Offset(3, 3),
+                                ),
+                              ],
                             ),
                             child: IconButton(
                               icon: Icon(
@@ -817,79 +828,75 @@ class _KaryawanScreenState extends State<KaryawanScreen> {
               const SizedBox(height: 16),
 
               // Salary Table
-              Expanded(
-                child: NeoTable(
-                  isLoading: _isLoadingSalaries,
-                  emptyIcon: Icons.request_quote_outlined,
-                  emptyText: 'Belum ada data rekap gaji untuk periode ini',
-                  columnWidths: const {
-                    0: FlexColumnWidth(2.2),
-                    1: FlexColumnWidth(1.2),
-                    2: FlexColumnWidth(1.5),
-                    3: FlexColumnWidth(1.3),
-                    4: FlexColumnWidth(1.3),
-                    5: FlexColumnWidth(1.3),
-                    6: FlexColumnWidth(1.6),
-                  },
-                  headers: const [
-                    NeoTableHeaderCell('NAMA KARYAWAN'),
-                    NeoTableHeaderCell('JENIS GAJI'),
-                    NeoTableHeaderCell('GAJI POKOK'),
-                    NeoTableHeaderCell('LEMBUR'),
-                    NeoTableHeaderCell('BONUS'),
-                    NeoTableHeaderCell('POTONGAN'),
-                    NeoTableHeaderCell('GAJI BERSIH'),
-                  ],
-                  rows: _salaryList.map((sal) {
-                    return [
-                      NeoTableCell(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Text(
-                              sal['employee_name'].toString(),
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
-                                color: Utils.border,
-                              ),
+              NeoTable(
+                isLoading: _isLoadingSalaries,
+                emptyIcon: Icons.request_quote_outlined,
+                emptyText: 'Belum ada data rekap gaji untuk periode ini',
+                columnWidths: const {
+                  0: FlexColumnWidth(2.2),
+                  1: FlexColumnWidth(1.2),
+                  2: FlexColumnWidth(1.5),
+                  3: FlexColumnWidth(1.3),
+                  4: FlexColumnWidth(1.3),
+                  5: FlexColumnWidth(1.3),
+                  6: FlexColumnWidth(1.6),
+                },
+                headers: const [
+                  NeoTableHeaderCell('NAMA KARYAWAN'),
+                  NeoTableHeaderCell('JENIS GAJI'),
+                  NeoTableHeaderCell('GAJI POKOK'),
+                  NeoTableHeaderCell('LEMBUR'),
+                  NeoTableHeaderCell('BONUS'),
+                  NeoTableHeaderCell('POTONGAN'),
+                  NeoTableHeaderCell('GAJI BERSIH'),
+                ],
+                rows: _salaryList.map((sal) {
+                  return [
+                    NeoTableCell(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            sal['employee_name'].toString(),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: Utils.border,
                             ),
-                            Text(
-                              '${sal['employee_code']} • ${sal['department_name']}',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Color(0xFF666666),
-                              ),
+                          ),
+                          Text(
+                            '${sal['employee_code']} • ${sal['department_name']}',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF666666),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                      NeoTableCell(text: sal['salary_type_name'].toString()),
-                      NeoTableCell(
-                        text: Utils.formatRupiah(sal['basic_salary'] as num),
-                      ),
-                      NeoTableCell(
-                        text: Utils.formatRupiah(sal['overtime_amount'] as num),
-                      ),
-                      NeoTableCell(
-                        text: Utils.formatRupiah(sal['bonus_amount'] as num),
-                      ),
-                      NeoTableCell(
-                        text: Utils.formatRupiah(
-                          sal['deduction_amount'] as num,
-                        ),
-                        isDanger: (sal['deduction_amount'] as num) > 0,
-                      ),
-                      NeoTableCell(
-                        text: Utils.formatRupiah(sal['net_salary'] as num),
-                        isBold: true,
-                        isSuccess: true,
-                      ),
-                    ];
-                  }).toList(),
-                ),
+                    ),
+                    NeoTableCell(text: sal['salary_type_name'].toString()),
+                    NeoTableCell(
+                      text: Utils.formatRupiah(sal['basic_salary'] as num),
+                    ),
+                    NeoTableCell(
+                      text: Utils.formatRupiah(sal['overtime_amount'] as num),
+                    ),
+                    NeoTableCell(
+                      text: Utils.formatRupiah(sal['bonus_amount'] as num),
+                    ),
+                    NeoTableCell(
+                      text: Utils.formatRupiah(sal['deduction_amount'] as num),
+                      isDanger: (sal['deduction_amount'] as num) > 0,
+                    ),
+                    NeoTableCell(
+                      text: Utils.formatRupiah(sal['net_salary'] as num),
+                      isBold: true,
+                      isSuccess: true,
+                    ),
+                  ];
+                }).toList(),
               ),
               const SizedBox(height: 16),
 

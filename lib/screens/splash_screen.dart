@@ -18,8 +18,9 @@ class SplashScreen extends StatelessWidget {
     final authModel = Provider.of<AuthModel>(context, listen: false);
 
     return AsciiPreloader(
-      minDuration: const Duration(milliseconds: 3500),
-      exitPauseDuration: const Duration(milliseconds: 700),
+      minDuration: const Duration(milliseconds: 2200),
+      exitPauseDuration: const Duration(milliseconds: 350),
+      exitDuration: const Duration(milliseconds: 850),
       onLoad: _initializeApp,
       // Konten aplikasi yang berada di bawah preloader dan akan tersingkap saat slide up
       child: authModel.isVerified

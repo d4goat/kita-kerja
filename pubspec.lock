@@ -81,6 +81,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "1.0.9"
+  dyn_mouse_scroll:
+    dependency: "direct main"
+    description:
+      name: dyn_mouse_scroll
+      sha256: "57890aed6fb19069bfbc5300f736a540ef23f8d91c956ead9c8f8e01060eb3e3"
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "1.0.7"
   equatable:
     dependency: transitive
     description:
@@ -488,6 +496,14 @@ packages:
       url: "https://pub.flutter-io.cn"
     source: hosted
     version: "1.4.0"
+  universal_io:
+    dependency: transitive
+    description:
+      name: universal_io
+      sha256: f63cbc48103236abf48e345e07a03ce5757ea86285ed313a6a032596ed9301e2
+      url: "https://pub.flutter-io.cn"
+    source: hosted
+    version: "2.3.1"
   uuid:
     dependency: transitive
     description:

@@ -3,6 +3,7 @@ import 'package:kita_kerja/database/index.dart';
 import 'package:kita_kerja/layouts/main_layout.dart';
 import 'package:kita_kerja/lib/utils.dart';
 import 'package:kita_kerja/widgets/neo_components.dart';
+import 'package:toastification/toastification.dart';
 
 class KaryawanFormScreen extends StatefulWidget {
   final Map<String, dynamic>? employeeToEdit;
@@ -147,13 +148,12 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
           _selectedDepartmentId == null ||
           _selectedSalaryTypeId == null ||
           _selectedWorkScheduleId == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Harap pilih semua referensi master data (Jabatan, Departemen, Gaji, Jadwal).',
-            ),
-            backgroundColor: Utils.danger,
-          ),
+        Utils.toast(
+          context,
+          'Harap pilih semua referensi master data (Jabatan, Departemen, Gaji, Jadwal)',
+          ToastificationType.error,
+          Icons.close,
+          Utils.danger,
         );
         return;
       }
@@ -192,15 +192,14 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
       if (!mounted) return;
       setState(() => _isSaving = false);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            isEdit
-                ? 'Data karyawan berhasil diperbarui!'
-                : 'Karyawan baru berhasil ditambahkan!',
-          ),
-          backgroundColor: Utils.success,
-        ),
+      Utils.toast(
+        context,
+        isEdit
+            ? 'Data karyawan berhasil diperbarui!'
+            : 'Karyawan baru berhasil ditambahkan!',
+        ToastificationType.success,
+        Icons.check,
+        Utils.success,
       );
 
       Navigator.pop(context, true);
@@ -286,15 +285,7 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Sesuai ketentuan PRD 6.3: Data karyawan terhubung langsung dengan referensi Data Master Jabatan, Departemen, Jenis Gaji, dan Jadwal Kerja.',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFF666666),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
+                        Utils.smallSpace,
                         const Divider(color: Color(0xFFEEEEEE), height: 1),
                         const SizedBox(height: 24),
 
@@ -744,11 +735,11 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
                                         ),
                                       ),
                                     ],
-                                     onChanged: (val) {
-                                       if (val != null) {
-                                         setState(() => _status = val);
-                                       }
-                                     },
+                                    onChanged: (val) {
+                                      if (val != null) {
+                                        setState(() => _status = val);
+                                      }
+                                    },
                                   ),
                                 ],
                               ),

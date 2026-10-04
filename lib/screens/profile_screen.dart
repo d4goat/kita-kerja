@@ -4,6 +4,7 @@ import 'package:kita_kerja/lib/utils.dart';
 import 'package:kita_kerja/models/auth_model.dart';
 import 'package:kita_kerja/widgets/neo_components.dart';
 import 'package:provider/provider.dart';
+import 'package:toastification/toastification.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -23,9 +24,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     final user = Provider.of<AuthModel>(context, listen: false).currentUser;
-    _nameController = TextEditingController(text: user?.name ?? 'Hendra Wijaya');
-    _emailController = TextEditingController(text: user?.email ?? 'hendra@kerjakita.com');
-    _phoneController = TextEditingController(text: user?.phone ?? '081234567890');
+    _nameController = TextEditingController(
+      text: user?.name ?? 'Hendra Wijaya',
+    );
+    _emailController = TextEditingController(
+      text: user?.email ?? 'hendra@kerjakita.com',
+    );
+    _phoneController = TextEditingController(
+      text: user?.phone ?? '081234567890',
+    );
   }
 
   @override
@@ -49,11 +56,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
 
       setState(() => _isSaving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profil Anda berhasil diperbarui!'),
-          backgroundColor: Utils.success,
-        ),
+
+      Utils.toast(
+        context,
+        'Profile Anda berhasil diperbarui!',
+        ToastificationType.success,
+        Icons.check,
+        Utils.success,
       );
     }
   }
@@ -74,7 +83,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               SizedBox(width: 8),
               Text(
                 'Konfirmasi Logout',
-                style: TextStyle(fontWeight: FontWeight.w800, color: Utils.border),
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: Utils.border,
+                ),
               ),
             ],
           ),
@@ -87,7 +99,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onPressed: () => Navigator.pop(dialogContext),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: Utils.border, width: 2),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               child: const Text('Batal', style: TextStyle(color: Utils.border)),
             ),
@@ -95,7 +109,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onPressed: () {
                 Navigator.pop(dialogContext);
                 Provider.of<AuthModel>(context, listen: false).logout();
-                Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/login',
+                  (route) => false,
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Utils.danger,
@@ -190,7 +208,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: 12),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: Utils.secondary,
                         borderRadius: BorderRadius.circular(16),
@@ -253,7 +274,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 4),
                       const Text(
                         'Perbarui informasi pribadi dan kontak akun Anda.',
-                        style: TextStyle(fontSize: 13, color: Color(0xFF666666)),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF666666),
+                        ),
                       ),
                       const SizedBox(height: 20),
                       NeoTextField(
