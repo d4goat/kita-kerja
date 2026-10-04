@@ -1,8 +1,7 @@
 import 'package:dyn_mouse_scroll/dyn_mouse_scroll.dart';
 import 'package:flutter/material.dart';
 
-/// Smooth Scroll wrapper for Flutter Web & Desktop using `dyn_mouse_scroll`.
-/// Provides physics-driven, ultra-smooth mouse wheel scrolling.
+/// Smooth Scroll wrapper menggunakan DynMouseScroll untuk Flutter Web & Desktop.
 class SmoothScrollWrapper extends StatelessWidget {
   final Widget child;
 

@@ -5,100 +5,126 @@ import 'package:kita_kerja/lib/utils.dart';
 import 'package:kita_kerja/widgets/neo_components.dart';
 import 'package:toastification/toastification.dart';
 
-class KaryawanFormScreen extends StatefulWidget {
-  final Map<String, dynamic>? employeeToEdit;
+class PekerjaanFormScreen extends StatefulWidget {
+  final Map<String, dynamic>? taskToEdit;
 
-  const KaryawanFormScreen({super.key, this.employeeToEdit});
+  const PekerjaanFormScreen({super.key, this.taskToEdit});
 
   @override
-  State<KaryawanFormScreen> createState() => _KaryawanFormScreenState();
+  State<PekerjaanFormScreen> createState() => _PekerjaanFormScreenState();
 }
 
-class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
+class _PekerjaanFormScreenState extends State<PekerjaanFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final MySQLHelper _dbHelper = MySQLHelper();
 
-  late TextEditingController _codeController;
-  late TextEditingController _nameController;
-  late TextEditingController _emailController;
-  late TextEditingController _phoneController;
-  late TextEditingController _joinDateController;
+  late TextEditingController _titleController;
+  late TextEditingController _descriptionController;
+  late TextEditingController _estimatedHoursController;
+  late TextEditingController _actualHoursController;
+  late TextEditingController _startDateController;
+  late TextEditingController _deadlineController;
 
-  int? _selectedPositionId;
-  int? _selectedDepartmentId;
-  int? _selectedSalaryTypeId;
-  int? _selectedWorkScheduleId;
-  String _status = 'active';
+  int? _selectedCategoryId;
+  int? _selectedAssignedTo;
+  String _priority = 'medium';
+  String _status = 'not_started';
 
-  List<Map<String, dynamic>> _positions = [];
-  List<Map<String, dynamic>> _departments = [];
-  List<Map<String, dynamic>> _salaryTypes = [];
-  List<Map<String, dynamic>> _workSchedules = [];
+  List<Map<String, dynamic>> _categories = [];
+  List<Map<String, dynamic>> _employees = [];
 
   bool _isLoadingDropdowns = true;
   bool _isSaving = false;
 
-  bool get isEdit => widget.employeeToEdit != null;
+  bool get isEdit => widget.taskToEdit != null;
 
   @override
   void initState() {
     super.initState();
-    final item = widget.employeeToEdit;
+    final item = widget.taskToEdit;
 
-    _codeController = TextEditingController(
-      text: isEdit ? item!['employee_code'].toString() : 'EMP007',
+    _titleController = TextEditingController(
+      text: isEdit ? item!['title'].toString() : '',
     );
-    _nameController = TextEditingController(
-      text: isEdit ? item!['full_name'].toString() : '',
+    _descriptionController = TextEditingController(
+      text: isEdit ? (item!['description'] ?? '').toString() : '',
     );
-    _emailController = TextEditingController(
-      text: isEdit ? (item!['email'] ?? '').toString() : '',
-    );
-    _phoneController = TextEditingController(
-      text: isEdit ? (item!['phone'] ?? '').toString() : '',
-    );
-    _joinDateController = TextEditingController(
+    _estimatedHoursController = TextEditingController(
       text: isEdit
-          ? item!['join_date'].toString()
-          : DateTime.now().toString().split(' ')[0],
+          ? (item!['estimated_hours'] != null
+                ? item['estimated_hours'].toString()
+                : '8.0')
+          : '8.0',
+    );
+    _actualHoursController = TextEditingController(
+      text: isEdit
+          ? (item!['actual_hours'] != null
+                ? item['actual_hours'].toString()
+                : '0.0')
+          : '0.0',
+    );
+
+    final now = DateTime.now();
+    final todayStr =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final next3Days = now.add(const Duration(days: 3));
+    final defaultDeadlineStr =
+        '${next3Days.year}-${next3Days.month.toString().padLeft(2, '0')}-${next3Days.day.toString().padLeft(2, '0')}';
+
+    _startDateController = TextEditingController(
+      text: isEdit ? (item!['start_date'] ?? todayStr).toString() : todayStr,
+    );
+    _deadlineController = TextEditingController(
+      text: isEdit ? item!['deadline'].toString() : defaultDeadlineStr,
     );
 
     if (isEdit) {
-      _selectedPositionId = item!['position_id'] as int?;
-      _selectedDepartmentId = item['department_id'] as int?;
-      _selectedSalaryTypeId = item['salary_type_id'] as int?;
-      _selectedWorkScheduleId = item['work_schedule_id'] as int?;
-      _status = item['status'].toString();
+      _selectedCategoryId = item!['category_id'] as int?;
+      _selectedAssignedTo = item['assigned_to'] as int?;
+      _priority = (item['priority'] ?? 'medium').toString();
+      _status = (item['status'] ?? 'not_started').toString();
     }
 
     _loadDropdownData();
   }
 
   Future<void> _loadDropdownData() async {
-    final positions = await _dbHelper.getPositions();
-    final departments = await _dbHelper.getDepartments();
-    final salaryTypes = await _dbHelper.getSalaryTypes();
-    final workSchedules = await _dbHelper.getWorkSchedules();
+    final categories = await _dbHelper.getJobCategories();
+    final employeesRes = await _dbHelper.getEmployees(
+      status: 'active',
+      pageSize: 100,
+    );
+    final employeesList = List<Map<String, dynamic>>.from(
+      employeesRes['data'] ?? [],
+    );
 
     if (!mounted) return;
     setState(() {
-      _positions = positions;
-      _departments = departments;
-      _salaryTypes = salaryTypes;
-      _workSchedules = workSchedules;
+      _categories = categories;
+      _employees = employeesList;
 
       if (!isEdit) {
-        if (_positions.isNotEmpty) {
-          _selectedPositionId = _positions.first['id'] as int;
+        if (_categories.isNotEmpty) {
+          _selectedCategoryId = _categories.first['id'] as int;
         }
-        if (_departments.isNotEmpty) {
-          _selectedDepartmentId = _departments.first['id'] as int;
+        if (_employees.isNotEmpty) {
+          _selectedAssignedTo = _employees.first['id'] as int;
         }
-        if (_salaryTypes.isNotEmpty) {
-          _selectedSalaryTypeId = _salaryTypes.first['id'] as int;
+      } else {
+        // Handle case where category_id or assigned_to was not explicitly passed
+        if (_selectedCategoryId == null && _categories.isNotEmpty) {
+          final found = _categories.firstWhere(
+            (c) => c['name'] == widget.taskToEdit?['category_name'],
+            orElse: () => _categories.first,
+          );
+          _selectedCategoryId = found['id'] as int;
         }
-        if (_workSchedules.isNotEmpty) {
-          _selectedWorkScheduleId = _workSchedules.first['id'] as int;
+        if (_selectedAssignedTo == null && _employees.isNotEmpty) {
+          final found = _employees.firstWhere(
+            (e) => e['full_name'] == widget.taskToEdit?['assigned_to_name'],
+            orElse: () => _employees.first,
+          );
+          _selectedAssignedTo = found['id'] as int;
         }
       }
       _isLoadingDropdowns = false;
@@ -107,20 +133,22 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
 
   @override
   void dispose() {
-    _codeController.dispose();
-    _nameController.dispose();
-    _emailController.dispose();
-    _phoneController.dispose();
-    _joinDateController.dispose();
+    _titleController.dispose();
+    _descriptionController.dispose();
+    _estimatedHoursController.dispose();
+    _actualHoursController.dispose();
+    _startDateController.dispose();
+    _deadlineController.dispose();
     super.dispose();
   }
 
-  Future<void> _selectJoinDate() async {
+  Future<void> _selectDate(TextEditingController controller) async {
+    DateTime initial = DateTime.tryParse(controller.text) ?? DateTime.now();
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2010),
-      lastDate: DateTime(2030),
+      initialDate: initial,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2035),
       builder: (context, child) {
         return Theme(
           data: ThemeData.light().copyWith(
@@ -137,20 +165,18 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
     );
     if (picked != null) {
       setState(() {
-        _joinDateController.text = picked.toString().split(' ')[0];
+        controller.text =
+            '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
       });
     }
   }
 
   void _handleSave() async {
     if (_formKey.currentState?.validate() ?? false) {
-      if (_selectedPositionId == null ||
-          _selectedDepartmentId == null ||
-          _selectedSalaryTypeId == null ||
-          _selectedWorkScheduleId == null) {
+      if (_selectedCategoryId == null) {
         Utils.toast(
           context,
-          'Harap pilih semua referensi master data (Jabatan, Departemen, Gaji, Jadwal)',
+          'Pilih kategori pekerjaan terlebih dahulu',
           ToastificationType.error,
           Icons.close,
           Utils.danger,
@@ -158,34 +184,54 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
         return;
       }
 
+      if (_selectedAssignedTo == null) {
+        Utils.toast(
+          context,
+          'Pilih penanggung jawab (karyawan aktif) terlebih dahulu',
+          ToastificationType.error,
+          Icons.close,
+          Utils.danger,
+        );
+        return;
+      }
+
+      final estimated =
+          double.tryParse(_estimatedHoursController.text.trim()) ?? 0.0;
+      final actual = double.tryParse(_actualHoursController.text.trim()) ?? 0.0;
+
       setState(() => _isSaving = true);
 
       if (isEdit) {
-        await _dbHelper.updateEmployee(
-          id: widget.employeeToEdit!['id'] as int,
-          employeeCode: _codeController.text.trim(),
-          fullName: _nameController.text.trim(),
-          email: _emailController.text.trim(),
-          phone: _phoneController.text.trim(),
-          positionId: _selectedPositionId!,
-          departmentId: _selectedDepartmentId!,
-          salaryTypeId: _selectedSalaryTypeId!,
-          workScheduleId: _selectedWorkScheduleId!,
-          joinDate: _joinDateController.text.trim(),
+        await _dbHelper.updateTask(
+          id: widget.taskToEdit!['id'] as int,
+          categoryId: _selectedCategoryId!,
+          assignedTo: _selectedAssignedTo!,
+          title: _titleController.text.trim(),
+          description: _descriptionController.text.trim(),
+          priority: _priority,
           status: _status,
+          estimatedHours: estimated,
+          actualHours: actual,
+          startDate: _startDateController.text.trim().isNotEmpty
+              ? _startDateController.text.trim()
+              : null,
+          deadline: _deadlineController.text.trim(),
         );
       } else {
-        await _dbHelper.addEmployee(
-          employeeCode: _codeController.text.trim(),
-          fullName: _nameController.text.trim(),
-          email: _emailController.text.trim(),
-          phone: _phoneController.text.trim(),
-          positionId: _selectedPositionId!,
-          departmentId: _selectedDepartmentId!,
-          salaryTypeId: _selectedSalaryTypeId!,
-          workScheduleId: _selectedWorkScheduleId!,
-          joinDate: _joinDateController.text.trim(),
+        await _dbHelper.addTask(
+          categoryId: _selectedCategoryId!,
+          createdBy: 1, // Admin / user saat ini
+          assignedTo: _selectedAssignedTo!,
+          title: _titleController.text.trim(),
+          description: _descriptionController.text.trim(),
+          priority: _priority,
           status: _status,
+          estimatedHours: estimated,
+          actualHours: actual,
+          startDate: _startDateController.text.trim().isNotEmpty
+              ? _startDateController.text.trim()
+              : null,
+          deadline: _deadlineController.text.trim(),
         );
       }
 
@@ -195,8 +241,8 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
       Utils.toast(
         context,
         isEdit
-            ? 'Data karyawan berhasil diperbarui!'
-            : 'Karyawan baru berhasil ditambahkan!',
+            ? 'Pekerjaan berhasil diperbarui!'
+            : 'Pekerjaan baru berhasil dibuat & ditugaskan!',
         ToastificationType.success,
         Icons.check,
         Utils.success,
@@ -209,8 +255,8 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
   @override
   Widget build(BuildContext context) {
     return MainLayout(
-      title: isEdit ? 'Edit Data Karyawan' : 'Tambah Karyawan Baru',
-      activeMenu: 'karyawan',
+      title: isEdit ? 'Edit Pekerjaan' : 'Tambah Pekerjaan Baru',
+      activeMenu: 'pekerjaan',
       child: _isLoadingDropdowns
           ? const Center(child: CircularProgressIndicator(color: Utils.primary))
           : SingleChildScrollView(
@@ -236,52 +282,47 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Header Title Row
+                        // Header Navigation Row
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
-                              children: [
-                                OutlinedButton.icon(
-                                  onPressed: () => Navigator.pop(context),
-                                  style: OutlinedButton.styleFrom(
-                                    side: const BorderSide(
-                                      color: Utils.border,
-                                      width: 2,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 8,
-                                    ),
-                                  ),
-                                  icon: const Icon(
-                                    Icons.arrow_back,
-                                    size: 16,
-                                    color: Utils.border,
-                                  ),
-                                  label: const Text(
-                                    'Kembali',
-                                    style: TextStyle(
-                                      color: Utils.border,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                            OutlinedButton.icon(
+                              onPressed: () => Navigator.pop(context),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(
+                                  color: Utils.border,
+                                  width: 2,
                                 ),
-                                const SizedBox(width: 16),
-                                Text(
-                                  isEdit
-                                      ? 'Form Sunting Karyawan'
-                                      : 'Form Registrasi Karyawan Baru',
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w800,
-                                    color: Utils.border,
-                                  ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                              ],
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                              ),
+                              icon: const Icon(
+                                Icons.arrow_back,
+                                size: 16,
+                                color: Utils.border,
+                              ),
+                              label: const Text(
+                                'Kembali',
+                                style: TextStyle(
+                                  color: Utils.border,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Text(
+                              isEdit
+                                  ? 'Form Sunting Pekerjaan / Tugas'
+                                  : 'Form Buat Pekerjaan Baru',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                color: Utils.border,
+                              ),
                             ),
                           ],
                         ),
@@ -289,9 +330,9 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
                         const Divider(color: Color(0xFFEEEEEE), height: 1),
                         const SizedBox(height: 24),
 
-                        // Form Section 1: Data Utama Karyawan
+                        // Section 1: Informasi Tugas
                         const Text(
-                          'INFORMASI PRIBADI & KONTAK',
+                          'RINCIAN TUGAS & PENUGASAN',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w800,
@@ -300,56 +341,319 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
                           ),
                         ),
                         const SizedBox(height: 14),
+                        NeoTextField(
+                          label: 'Judul Pekerjaan / Tugas',
+                          placeholder: 'misal: Input data penjualan harian',
+                          controller: _titleController,
+                          validator: (val) {
+                            if (val == null || val.trim().isEmpty) {
+                              return 'Judul pekerjaan wajib diisi';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Dropdown Kategori & Penanggung Jawab
                         Row(
                           children: [
+                            // Kategori Pekerjaan
                             Expanded(
-                              child: NeoTextField(
-                                label: 'Kode Karyawan (NIK)',
-                                placeholder: 'misal: EMP007',
-                                controller: _codeController,
-                                validator: (val) {
-                                  if (val == null || val.trim().isEmpty) {
-                                    return 'Kode karyawan wajib diisi';
-                                  }
-                                  return null;
-                                },
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'KATEGORI PEKERJAAN',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: Utils.border,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  DropdownButtonFormField<int>(
+                                    initialValue: _selectedCategoryId,
+                                    decoration: InputDecoration(
+                                      filled: true,
+                                      fillColor: Colors.white,
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 10,
+                                          ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: const BorderSide(
+                                          color: Utils.border,
+                                          width: 2,
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: const BorderSide(
+                                          color: Utils.border,
+                                          width: 2,
+                                        ),
+                                      ),
+                                    ),
+                                    items: _categories.map((c) {
+                                      return DropdownMenuItem<int>(
+                                        value: c['id'] as int,
+                                        child: Text(
+                                          c['name'].toString(),
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: Utils.border,
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                    onChanged: (val) => setState(
+                                      () => _selectedCategoryId = val,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                             const SizedBox(width: 16),
+                            // Penanggung Jawab (Karyawan)
                             Expanded(
-                              flex: 2,
-                              child: NeoTextField(
-                                label: 'Nama Lengkap Karyawan',
-                                placeholder: 'Nama lengkap karyawan',
-                                controller: _nameController,
-                                validator: (val) {
-                                  if (val == null || val.trim().isEmpty) {
-                                    return 'Nama lengkap wajib diisi';
-                                  }
-                                  return null;
-                                },
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'PENANGGUNG JAWAB (KARYAWAN)',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: Utils.border,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  DropdownButtonFormField<int>(
+                                    initialValue: _selectedAssignedTo,
+                                    decoration: InputDecoration(
+                                      filled: true,
+                                      fillColor: Colors.white,
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 10,
+                                          ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: const BorderSide(
+                                          color: Utils.border,
+                                          width: 2,
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: const BorderSide(
+                                          color: Utils.border,
+                                          width: 2,
+                                        ),
+                                      ),
+                                    ),
+                                    items: _employees.map((e) {
+                                      return DropdownMenuItem<int>(
+                                        value: e['id'] as int,
+                                        child: Text(
+                                          '${e['full_name']} (${e['employee_code'] ?? 'Karyawan'})',
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: Utils.border,
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                    onChanged: (val) => setState(
+                                      () => _selectedAssignedTo = val,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 16),
+
+                        // Prioritas & Status
                         Row(
                           children: [
+                            // Prioritas
                             Expanded(
-                              child: NeoTextField(
-                                label: 'Email',
-                                placeholder: 'karyawan@perusahaan.com',
-                                controller: _emailController,
-                                keyboardType: TextInputType.emailAddress,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'PRIORITAS',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: Utils.border,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  DropdownButtonFormField<String>(
+                                    initialValue: _priority,
+                                    decoration: InputDecoration(
+                                      filled: true,
+                                      fillColor: Colors.white,
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 10,
+                                          ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: const BorderSide(
+                                          color: Utils.border,
+                                          width: 2,
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: const BorderSide(
+                                          color: Utils.border,
+                                          width: 2,
+                                        ),
+                                      ),
+                                    ),
+                                    items: const [
+                                      DropdownMenuItem(
+                                        value: 'low',
+                                        child: Text(
+                                          'Rendah (Low)',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'medium',
+                                        child: Text(
+                                          'Sedang (Medium)',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'high',
+                                        child: Text(
+                                          'Tinggi (High)',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'urgent',
+                                        child: Text(
+                                          'Mendesak (Urgent)',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            color: Utils.danger,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                    onChanged: (val) {
+                                      if (val != null)
+                                        setState(() => _priority = val);
+                                    },
+                                  ),
+                                ],
                               ),
                             ),
                             const SizedBox(width: 16),
+                            // Status Pekerjaan
                             Expanded(
-                              child: NeoTextField(
-                                label: 'Nomor Telepon / WhatsApp',
-                                placeholder: '081234567890',
-                                controller: _phoneController,
-                                keyboardType: TextInputType.phone,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'STATUS PEKERJAAN',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: Utils.border,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  DropdownButtonFormField<String>(
+                                    initialValue: _status,
+                                    decoration: InputDecoration(
+                                      filled: true,
+                                      fillColor: Colors.white,
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 10,
+                                          ),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: const BorderSide(
+                                          color: Utils.border,
+                                          width: 2,
+                                        ),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                        borderSide: const BorderSide(
+                                          color: Utils.border,
+                                          width: 2,
+                                        ),
+                                      ),
+                                    ),
+                                    items: const [
+                                      DropdownMenuItem(
+                                        value: 'not_started',
+                                        child: Text(
+                                          'Belum Mulai',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'in_progress',
+                                        child: Text(
+                                          'Sedang Dikerjakan',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'review',
+                                        child: Text(
+                                          'Ditinjau (Review)',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                      DropdownMenuItem(
+                                        value: 'completed',
+                                        child: Text(
+                                          'Selesai (Completed)',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            color: Utils.success,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                    onChanged: (val) {
+                                      if (val != null)
+                                        setState(() => _status = val);
+                                    },
+                                  ),
+                                ],
                               ),
                             ),
                           ],
@@ -359,9 +663,9 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
                         const Divider(color: Color(0xFFEEEEEE), height: 1),
                         const SizedBox(height: 24),
 
-                        // Form Section 2: Data Master Referensi
+                        // Section 2: Estimasi Jam & Jadwal
                         const Text(
-                          'REFERENSI STRUKTUR & MASTER DATA',
+                          'ESTIMASI BEBAN & WAKTU PELAKSANAAN',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w800,
@@ -372,123 +676,36 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
                         const SizedBox(height: 14),
                         Row(
                           children: [
-                            // Position Dropdown
                             Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'JABATAN',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: Utils.border,
+                              child: NeoTextField(
+                                label: 'Estimasi Jam Kerja',
+                                placeholder: 'misal: 8.0',
+                                controller: _estimatedHoursController,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
                                     ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  DropdownButtonFormField<int>(
-                                    initialValue: _selectedPositionId,
-                                    decoration: InputDecoration(
-                                      filled: true,
-                                      fillColor: Colors.white,
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 10,
-                                          ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: const BorderSide(
-                                          color: Utils.border,
-                                          width: 2,
-                                        ),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: const BorderSide(
-                                          color: Utils.border,
-                                          width: 2,
-                                        ),
-                                      ),
-                                    ),
-                                    items: _positions.map((p) {
-                                      return DropdownMenuItem<int>(
-                                        value: p['id'] as int,
-                                        child: Text(
-                                          p['name'].toString(),
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: Utils.border,
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
-                                    onChanged: (val) => setState(
-                                      () => _selectedPositionId = val,
-                                    ),
-                                  ),
-                                ],
+                                validator: (val) {
+                                  if (val == null || val.trim().isEmpty) {
+                                    return 'Estimasi jam wajib diisi';
+                                  }
+                                  if (double.tryParse(val.trim()) == null) {
+                                    return 'Gunakan angka (misal: 8.0)';
+                                  }
+                                  return null;
+                                },
                               ),
                             ),
                             const SizedBox(width: 16),
-                            // Department Dropdown
                             Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'DEPARTEMEN',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: Utils.border,
+                              child: NeoTextField(
+                                label: 'Realisasi Jam Kerja (Actual)',
+                                placeholder: 'misal: 4.0',
+                                controller: _actualHoursController,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
                                     ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  DropdownButtonFormField<int>(
-                                    initialValue: _selectedDepartmentId,
-                                    decoration: InputDecoration(
-                                      filled: true,
-                                      fillColor: Colors.white,
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 10,
-                                          ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: const BorderSide(
-                                          color: Utils.border,
-                                          width: 2,
-                                        ),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: const BorderSide(
-                                          color: Utils.border,
-                                          width: 2,
-                                        ),
-                                      ),
-                                    ),
-                                    items: _departments.map((d) {
-                                      return DropdownMenuItem<int>(
-                                        value: d['id'] as int,
-                                        child: Text(
-                                          d['name'].toString(),
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: Utils.border,
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
-                                    onChanged: (val) => setState(
-                                      () => _selectedDepartmentId = val,
-                                    ),
-                                  ),
-                                ],
                               ),
                             ),
                           ],
@@ -496,137 +713,13 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
                         const SizedBox(height: 16),
                         Row(
                           children: [
-                            // Salary Type Dropdown
+                            // Start Date Picker
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text(
-                                    'JENIS GAJI',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: Utils.border,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  DropdownButtonFormField<int>(
-                                    initialValue: _selectedSalaryTypeId,
-                                    decoration: InputDecoration(
-                                      filled: true,
-                                      fillColor: Colors.white,
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 10,
-                                          ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: const BorderSide(
-                                          color: Utils.border,
-                                          width: 2,
-                                        ),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: const BorderSide(
-                                          color: Utils.border,
-                                          width: 2,
-                                        ),
-                                      ),
-                                    ),
-                                    items: _salaryTypes.map((st) {
-                                      return DropdownMenuItem<int>(
-                                        value: st['id'] as int,
-                                        child: Text(
-                                          st['name'].toString(),
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: Utils.border,
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
-                                    onChanged: (val) => setState(
-                                      () => _selectedSalaryTypeId = val,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            // Work Schedule Dropdown
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'JADWAL KERJA',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: Utils.border,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  DropdownButtonFormField<int>(
-                                    initialValue: _selectedWorkScheduleId,
-                                    decoration: InputDecoration(
-                                      filled: true,
-                                      fillColor: Colors.white,
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 10,
-                                          ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: const BorderSide(
-                                          color: Utils.border,
-                                          width: 2,
-                                        ),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: const BorderSide(
-                                          color: Utils.border,
-                                          width: 2,
-                                        ),
-                                      ),
-                                    ),
-                                    items: _workSchedules.map((ws) {
-                                      return DropdownMenuItem<int>(
-                                        value: ws['id'] as int,
-                                        child: Text(
-                                          ws['name'].toString(),
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: Utils.border,
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
-                                    onChanged: (val) => setState(
-                                      () => _selectedWorkScheduleId = val,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            // Join Date Picker Field
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'TANGGAL BERGABUNG',
+                                    'TANGGAL MULAI',
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w700,
@@ -635,9 +728,10 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
                                   ),
                                   const SizedBox(height: 6),
                                   TextFormField(
-                                    controller: _joinDateController,
+                                    controller: _startDateController,
                                     readOnly: true,
-                                    onTap: _selectJoinDate,
+                                    onTap: () =>
+                                        _selectDate(_startDateController),
                                     decoration: InputDecoration(
                                       suffixIcon: const Icon(
                                         Icons.calendar_today,
@@ -676,13 +770,13 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
                               ),
                             ),
                             const SizedBox(width: 16),
-                            // Status Dropdown
+                            // Deadline Date Picker
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text(
-                                    'STATUS KARYAWAN',
+                                    'DEADLINE / TENGGAT WAKTU',
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w700,
@@ -690,9 +784,23 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
                                     ),
                                   ),
                                   const SizedBox(height: 6),
-                                  DropdownButtonFormField<String>(
-                                    initialValue: _status,
+                                  TextFormField(
+                                    controller: _deadlineController,
+                                    readOnly: true,
+                                    onTap: () =>
+                                        _selectDate(_deadlineController),
+                                    validator: (val) {
+                                      if (val == null || val.trim().isEmpty) {
+                                        return 'Deadline wajib diisi';
+                                      }
+                                      return null;
+                                    },
                                     decoration: InputDecoration(
+                                      suffixIcon: const Icon(
+                                        Icons.event_busy,
+                                        size: 18,
+                                        color: Utils.danger,
+                                      ),
                                       filled: true,
                                       fillColor: Colors.white,
                                       contentPadding:
@@ -715,36 +823,38 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
                                         ),
                                       ),
                                     ),
-                                    items: const [
-                                      DropdownMenuItem(
-                                        value: 'active',
-                                        child: Text(
-                                          'Aktif',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                      DropdownMenuItem(
-                                        value: 'inactive',
-                                        child: Text(
-                                          'Nonaktif',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                    onChanged: (val) {
-                                      if (val != null) {
-                                        setState(() => _status = val);
-                                      }
-                                    },
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Utils.border,
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
                           ],
+                        ),
+
+                        const SizedBox(height: 24),
+                        const Divider(color: Color(0xFFEEEEEE), height: 1),
+                        const SizedBox(height: 24),
+
+                        // Section 3: Deskripsi & Instruksi
+                        const Text(
+                          'DESKRIPSI & INSTRUKSI TUGAS',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: Utils.primary,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        NeoTextField(
+                          label: 'Deskripsi Rincian Tugas (Opsional)',
+                          placeholder: 'Jelaskan instruksi atau catatan khusus untuk karyawan...',
+                          controller: _descriptionController,
+                          maxLines: 4,
                         ),
 
                         const SizedBox(height: 28),
@@ -782,7 +892,7 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
                               child: NeoButton(
                                 text: isEdit
                                     ? 'Simpan Perubahan'
-                                    : 'Tambah Karyawan',
+                                    : 'Buat Pekerjaan',
                                 isLoading: _isSaving,
                                 onPressed: _handleSave,
                               ),

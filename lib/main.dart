@@ -10,6 +10,7 @@ import 'package:kita_kerja/screens/karyawan_screen.dart';
 import 'package:kita_kerja/screens/kehadiran_screen.dart';
 import 'package:kita_kerja/screens/login_screen.dart';
 import 'package:kita_kerja/screens/master_data_screen.dart';
+import 'package:kita_kerja/screens/pekerjaan_form_screen.dart';
 import 'package:kita_kerja/screens/pekerjaan_screen.dart';
 import 'package:kita_kerja/screens/profile_screen.dart';
 import 'package:kita_kerja/screens/register_screen.dart';
@@ -92,6 +93,10 @@ class MyApp extends StatelessWidget {
               break;
             case '/pekerjaan':
               page = const PekerjaanScreen();
+              break;
+            case '/pekerjaan-form':
+              final args = settings.arguments as Map<String, dynamic>?;
+              page = PekerjaanFormScreen(taskToEdit: args);
               break;
             case '/user-list':
               page = const UserListScreen();

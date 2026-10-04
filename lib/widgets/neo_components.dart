@@ -131,6 +131,7 @@ class NeoTextField extends StatefulWidget {
   final bool isPassword;
   final TextInputType keyboardType;
   final String? Function(String?)? validator;
+  final int maxLines;
 
   const NeoTextField({
     super.key,
@@ -140,6 +141,7 @@ class NeoTextField extends StatefulWidget {
     this.isPassword = false,
     this.keyboardType = TextInputType.text,
     this.validator,
+    this.maxLines = 1,
   });
 
   @override
@@ -169,6 +171,7 @@ class _NeoTextFieldState extends State<NeoTextField> {
           obscureText: widget.isPassword ? _obscureText : false,
           keyboardType: widget.keyboardType,
           validator: widget.validator,
+          maxLines: widget.isPassword ? 1 : widget.maxLines,
           style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,

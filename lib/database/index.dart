@@ -308,6 +308,63 @@ class MySQLHelper {
     String? status,
   }) => pekerjaan.getTasks(search: search, status: status);
 
+  Future<bool> addTask({
+    required int categoryId,
+    int createdBy = 1,
+    required int assignedTo,
+    required String title,
+    String? description,
+    String priority = 'medium',
+    String status = 'not_started',
+    double estimatedHours = 0.0,
+    double actualHours = 0.0,
+    String? startDate,
+    required String deadline,
+  }) => pekerjaan.addTask(
+    categoryId: categoryId,
+    createdBy: createdBy,
+    assignedTo: assignedTo,
+    title: title,
+    description: description,
+    priority: priority,
+    status: status,
+    estimatedHours: estimatedHours,
+    actualHours: actualHours,
+    startDate: startDate,
+    deadline: deadline,
+  );
+
+  Future<bool> updateTask({
+    required int id,
+    required int categoryId,
+    required int assignedTo,
+    required String title,
+    String? description,
+    required String priority,
+    required String status,
+    required double estimatedHours,
+    required double actualHours,
+    String? startDate,
+    required String deadline,
+  }) => pekerjaan.updateTask(
+    id: id,
+    categoryId: categoryId,
+    assignedTo: assignedTo,
+    title: title,
+    description: description,
+    priority: priority,
+    status: status,
+    estimatedHours: estimatedHours,
+    actualHours: actualHours,
+    startDate: startDate,
+    deadline: deadline,
+  );
+
+  Future<bool> updateTaskStatus(int id, String status) =>
+      pekerjaan.updateTaskStatus(id, status);
+
+  Future<bool> deleteTask(int id) => pekerjaan.deleteTask(id);
+
   // =========================================================
   // 11. DASHBOARD & WORKLOAD DATA
   // =========================================================

@@ -3,6 +3,7 @@ import 'package:kita_kerja/database/index.dart';
 import 'package:kita_kerja/layouts/main_layout.dart';
 import 'package:kita_kerja/lib/utils.dart';
 import 'package:kita_kerja/widgets/neo_components.dart';
+import 'package:toastification/toastification.dart';
 
 class PekerjaanScreen extends StatefulWidget {
   const PekerjaanScreen({super.key});
@@ -105,6 +106,216 @@ class _PekerjaanScreenState extends State<PekerjaanScreen> {
     }
   }
 
+  void _handleQuickStatusDialog(Map<String, dynamic> task) {
+    final currentStatus = task['status'].toString();
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: Utils.border, width: 2),
+          ),
+          title: Text(
+            'Ubah Status Pekerjaan',
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              color: Utils.border,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Tugas: "${task['title']}"',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: Utils.border,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ...[
+                {
+                  'val': 'not_started',
+                  'label': 'Belum Mulai',
+                  'color': Colors.grey,
+                },
+                {
+                  'val': 'in_progress',
+                  'label': 'Sedang Dikerjakan',
+                  'color': Utils.primary,
+                },
+                {
+                  'val': 'review',
+                  'label': 'Ditinjau (Review)',
+                  'color': Utils.secondary,
+                },
+                {
+                  'val': 'completed',
+                  'label': 'Selesai (Completed)',
+                  'color': Utils.success,
+                },
+              ].map((opt) {
+                final isSelected = opt['val'] == currentStatus;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () async {
+                      Navigator.pop(dialogContext);
+                      final newVal = opt['val'] as String;
+                      if (newVal != currentStatus) {
+                        await _dbHelper.updateTaskStatus(
+                          task['id'] as int,
+                          newVal,
+                        );
+                        _loadTasks();
+                        if (!mounted) return;
+                        Utils.toast(
+                          context,
+                          'Status tugas diubah menjadi ${_getStatusLabel(newVal)}',
+                          ToastificationType.success,
+                          Icons.check,
+                          Utils.success,
+                        );
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? const Color(0xFFF5F1E8)
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isSelected
+                              ? Utils.border
+                              : const Color(0xFFE0E0E0),
+                          width: isSelected ? 2 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: opt['color'] as Color,
+                              border: Border.all(
+                                color: Utils.border,
+                                width: 1.5,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              opt['label'] as String,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: isSelected
+                                    ? FontWeight.w800
+                                    : FontWeight.w600,
+                                color: Utils.border,
+                              ),
+                            ),
+                          ),
+                          if (isSelected)
+                            const Icon(
+                              Icons.check_circle,
+                              color: Utils.primary,
+                              size: 18,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+          actions: [
+            OutlinedButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Utils.border, width: 2),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Tutup', style: TextStyle(color: Utils.border)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _handleDeleteTask(Map<String, dynamic> task) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: Utils.border, width: 2),
+          ),
+          title: const Text(
+            'Konfirmasi Hapus Pekerjaan',
+            style: TextStyle(fontWeight: FontWeight.w800, color: Utils.border),
+          ),
+          content: Text(
+            'Apakah Anda yakin ingin menghapus pekerjaan "${task['title']}"?\nTindakan ini tidak dapat dibatalkan.',
+            style: const TextStyle(color: Utils.border),
+          ),
+          actions: [
+            OutlinedButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Utils.border, width: 2),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text('Batal', style: TextStyle(color: Utils.border)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(dialogContext);
+                await _dbHelper.deleteTask(task['id'] as int);
+                _loadTasks();
+                if (!mounted) return;
+                Utils.toast(
+                  context,
+                  'Pekerjaan "${task['title']}" berhasil dihapus',
+                  ToastificationType.success,
+                  Icons.delete_outline,
+                  Utils.danger,
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Utils.danger,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: const BorderSide(color: Utils.border, width: 2),
+                ),
+              ),
+              child: const Text('Hapus'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final filtered = _tasks.where((item) {
@@ -122,15 +333,15 @@ class _PekerjaanScreenState extends State<PekerjaanScreen> {
     return MainLayout(
       title: 'Manajemen Pekerjaan',
       activeMenu: 'pekerjaan',
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
             // Controls Bar
             Row(
               children: [
+                // Search Box
                 Expanded(
                   child: Container(
                     height: 42,
@@ -166,6 +377,7 @@ class _PekerjaanScreenState extends State<PekerjaanScreen> {
                   ),
                 ),
                 const SizedBox(width: 16),
+                // Filter Status Dropdown
                 Container(
                   height: 42,
                   padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -214,147 +426,238 @@ class _PekerjaanScreenState extends State<PekerjaanScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(width: 16),
+                // Button Tambah Pekerjaan
+                SizedBox(
+                  width: 200,
+                  height: 42,
+                  child: NeoButton(
+                    text: '+ Tambah Pekerjaan',
+                    backgroundColor: Utils.primary,
+                    onPressed: () async {
+                      final result = await Navigator.pushNamed(
+                        context,
+                        '/pekerjaan-form',
+                      );
+                      if (result == true) {
+                        _loadTasks();
+                      }
+                    },
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 20),
 
             // Tasks Table
             NeoTable(
-                isLoading: _isLoading,
-                emptyIcon: Icons.assignment_turned_in_outlined,
-                emptyText: 'Tidak ada pekerjaan ditemukan',
-                columnWidths: const {
-                  0: FlexColumnWidth(2.5),
-                  1: FlexColumnWidth(1.2),
-                  2: FlexColumnWidth(1.6),
-                  3: FlexColumnWidth(1.1),
-                  4: FlexColumnWidth(1.2),
-                  5: FlexColumnWidth(1.4),
-                },
-                headers: const [
-                  NeoTableHeaderCell('JUDUL TUGAS'),
-                  NeoTableHeaderCell('KATEGORI'),
-                  NeoTableHeaderCell('PENANGGUNG JAWAB'),
-                  NeoTableHeaderCell('PRIORITAS'),
-                  NeoTableHeaderCell('DEADLINE'),
-                  NeoTableHeaderCell('STATUS'),
-                ],
-                rows: filtered.map((task) {
-                  final priority = task['priority'].toString();
-                  final st = task['status'].toString();
-                  return [
-                    NeoTableCell(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(
-                            task['title'].toString(),
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: Utils.border,
-                            ),
+              isLoading: _isLoading,
+              emptyIcon: Icons.assignment_turned_in_outlined,
+              emptyText: 'Tidak ada pekerjaan ditemukan',
+              columnWidths: const {
+                0: FlexColumnWidth(2.3),
+                1: FlexColumnWidth(1.2),
+                2: FlexColumnWidth(1.5),
+                3: FlexColumnWidth(1.0),
+                4: FlexColumnWidth(1.1),
+                5: FlexColumnWidth(1.6),
+                6: FlexColumnWidth(1.3),
+              },
+              headers: const [
+                NeoTableHeaderCell('JUDUL TUGAS'),
+                NeoTableHeaderCell('KATEGORI'),
+                NeoTableHeaderCell('PENANGGUNG JAWAB'),
+                NeoTableHeaderCell('PRIORITAS'),
+                NeoTableHeaderCell('DEADLINE'),
+                NeoTableHeaderCell('STATUS'),
+                NeoTableHeaderCell('AKSI'),
+              ],
+              rows: filtered.map((task) {
+                final priority = task['priority'].toString();
+                final st = task['status'].toString();
+                return [
+                  // Judul & Deskripsi
+                  NeoTableCell(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          task['title'].toString(),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: Utils.border,
                           ),
-                          if (task['description'].toString().isNotEmpty)
-                            Text(
-                              task['description'].toString(),
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Color(0xFF666666),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    NeoTableCell(text: task['category_name'].toString()),
-                    NeoTableCell(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
+                        ),
+                        if (task['description'].toString().isNotEmpty)
                           Text(
-                            task['assigned_to_name'].toString(),
+                            task['description'].toString(),
                             textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: Utils.border,
-                            ),
-                          ),
-                          Text(
-                            task['employee_code'].toString(),
-                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 11,
                               color: Color(0xFF666666),
                             ),
                           ),
-                        ],
-                      ),
+                      ],
                     ),
-                    // Priority Badge
-                    NeoTableCell(
-                      child: Align(
-                        alignment: Alignment.center,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
+                  ),
+                  // Kategori
+                  NeoTableCell(text: task['category_name'].toString()),
+                  // Penanggung Jawab
+                  NeoTableCell(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          task['assigned_to_name'].toString(),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: Utils.border,
                           ),
-                          decoration: BoxDecoration(
-                            color: _getPriorityBg(priority),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: Utils.border,
-                              width: 1.5,
-                            ),
+                        ),
+                        Text(
+                          task['employee_code'].toString(),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF666666),
                           ),
-                          child: Text(
-                            priority.toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              color: _getPriorityText(priority),
-                            ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Priority Badge
+                  NeoTableCell(
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _getPriorityBg(priority),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Utils.border, width: 1.5),
+                        ),
+                        child: Text(
+                          priority.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            color: _getPriorityText(priority),
                           ),
                         ),
                       ),
                     ),
-                    NeoTableCell(text: task['deadline'].toString()),
-                    // Status Badge
-                    NeoTableCell(
-                      child: Align(
-                        alignment: Alignment.center,
+                  ),
+                  // Deadline
+                  NeoTableCell(text: task['deadline'].toString()),
+                  // Status Badge with Click to Change
+                  NeoTableCell(
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: InkWell(
+                        onTap: () => _handleQuickStatusDialog(task),
+                        borderRadius: BorderRadius.circular(14),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
+                            horizontal: 15,
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
                             color: _getStatusBg(st),
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                              color: Utils.border,
-                              width: 1.5,
-                            ),
+                            border: Border.all(color: Utils.border, width: 1.5),
                           ),
-                          child: Text(
-                            _getStatusLabel(st),
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              color: _getStatusText(st),
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _getStatusLabel(st),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: _getStatusText(st),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(
+                                Icons.arrow_drop_down,
+                                size: 14,
+                                color: _getStatusText(st),
+                              ),
+                            ],
                           ),
                         ),
                       ),
                     ),
-                  ];
-                }).toList(),
-              ),
-            ],
-          ),
+                  ),
+                  // Aksi (Edit & Delete Buttons)
+                  NeoTableCell(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Edit Button
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Utils.secondary,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(width: 1.5, color: Utils.border),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.edit_outlined,
+                              size: 16,
+                              color: Utils.border,
+                            ),
+                            tooltip: 'Sunting Pekerjaan',
+                            padding: const EdgeInsets.all(6),
+                            constraints: const BoxConstraints(),
+                            onPressed: () async {
+                              final result = await Navigator.pushNamed(
+                                context,
+                                '/pekerjaan-form',
+                                arguments: task,
+                              );
+                              if (result == true) {
+                                _loadTasks();
+                              }
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Delete Button
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Utils.danger,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(width: 1.5, color: Utils.border),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.delete_outline,
+                              size: 16,
+                              color: Colors.white,
+                            ),
+                            tooltip: 'Hapus Pekerjaan',
+                            padding: const EdgeInsets.all(6),
+                            constraints: const BoxConstraints(),
+                            onPressed: () => _handleDeleteTask(task),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ];
+              }).toList(),
+            ),
+          ],
         ),
       ),
     );
