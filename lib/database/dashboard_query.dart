@@ -9,52 +9,49 @@ class DashboardQuery {
       var connection = await DatabaseConnection.getConnection();
       try {
         // 1. Total Karyawan Aktif
-        var empResults = await connection.query(
+        var empResults = await connection.execute(
           "SELECT COUNT(*) AS total_count FROM employees WHERE status = 'active'",
         );
-        int totalEmployees = empResults.isNotEmpty
-            ? (int.tryParse(empResults.first['total_count'].toString()) ?? 0)
+        int totalEmployees = empResults.rows.isNotEmpty
+            ? (int.tryParse(empResults.rows.first.assoc()['total_count'] ?? '') ?? 0)
             : 0;
 
         // 2. Kehadiran Hari Ini (atau tanggal kehadiran terbaru)
-        var maxDateRes = await connection.query(
+        var maxDateRes = await connection.execute(
           "SELECT MAX(attendance_date) AS max_date FROM attendances",
         );
-        DateTime? latestDate =
-            maxDateRes.isNotEmpty && maxDateRes.first['max_date'] != null
-            ? (maxDateRes.first['max_date'] is DateTime
-                  ? maxDateRes.first['max_date'] as DateTime
-                  : DateTime.tryParse(maxDateRes.first['max_date'].toString()))
+        String? latestDateStr = maxDateRes.rows.isNotEmpty
+            ? maxDateRes.rows.first.assoc()['max_date']
             : null;
+        if (latestDateStr != null && latestDateStr.contains(' ')) {
+          latestDateStr = latestDateStr.split(' ')[0];
+        }
 
         int presentToday = 0;
         int overtimeCount = 0;
 
-        if (latestDate != null) {
-          var attSummaryRes = await connection.query(
+        if (latestDateStr != null && latestDateStr.isNotEmpty) {
+          var attSummaryRes = await connection.execute(
             '''
             SELECT 
               COUNT(CASE WHEN status IN ('present', 'late') THEN 1 END) AS present_count,
               COUNT(CASE WHEN overtime_minutes > 0 THEN 1 END) AS overtime_count
             FROM attendances
-            WHERE attendance_date = ?
+            WHERE attendance_date = :att_date
             ''',
-            [latestDate],
+            {'att_date': latestDateStr},
           );
-          if (attSummaryRes.isNotEmpty) {
+          if (attSummaryRes.rows.isNotEmpty) {
+            var data = attSummaryRes.rows.first.assoc();
             presentToday =
-                int.tryParse(attSummaryRes.first['present_count'].toString()) ??
-                0;
+                int.tryParse(data['present_count'] ?? '') ?? 0;
             overtimeCount =
-                int.tryParse(
-                  attSummaryRes.first['overtime_count'].toString(),
-                ) ??
-                0;
+                int.tryParse(data['overtime_count'] ?? '') ?? 0;
           }
         }
 
         // 3. Pekerjaan Aktif & Jumlah Tim
-        var taskSummaryRes = await connection.query('''
+        var taskSummaryRes = await connection.execute('''
           SELECT 
             COUNT(*) AS active_tasks,
             COUNT(DISTINCT e.department_id) AS active_teams
@@ -64,17 +61,16 @@ class DashboardQuery {
           ''');
         int activeTasks = 0;
         int activeTeams = 0;
-        if (taskSummaryRes.isNotEmpty) {
+        if (taskSummaryRes.rows.isNotEmpty) {
+          var data = taskSummaryRes.rows.first.assoc();
           activeTasks =
-              int.tryParse(taskSummaryRes.first['active_tasks'].toString()) ??
-              0;
+              int.tryParse(data['active_tasks'] ?? '') ?? 0;
           activeTeams =
-              int.tryParse(taskSummaryRes.first['active_teams'].toString()) ??
-              0;
+              int.tryParse(data['active_teams'] ?? '') ?? 0;
         }
 
         // 4. Beban Kerja Per Karyawan (Workload Records)
-        var workloadResults = await connection.query('''
+        var workloadResults = await connection.execute('''
           SELECT 
             w.id, w.capacity_hours, w.assigned_hours, w.actual_hours, w.workload_percentage, w.status,
             e.full_name AS employee_name, e.employee_code, d.name AS department_name
@@ -88,26 +84,36 @@ class DashboardQuery {
         List<Map<String, dynamic>> workloadList = [];
         Map<String, dynamic>? overloadedEmployee;
 
-        for (var row in workloadResults) {
+        for (var row in workloadResults.rows) {
+          var data = row.assoc();
           double pct =
-              double.tryParse(row['workload_percentage'].toString()) ?? 0.0;
+              double.tryParse(data['workload_percentage'] ?? '') ?? 0.0;
+          double capHours =
+              double.tryParse(data['capacity_hours'] ?? '') ?? 0.0;
+          double assHours =
+              double.tryParse(data['assigned_hours'] ?? '') ?? 0.0;
+          double actHours =
+              double.tryParse(data['actual_hours'] ?? '') ?? 0.0;
+          int id = int.tryParse(data['id'] ?? '') ?? 0;
+          String status = data['status'] ?? 'normal';
+
           final item = {
-            'id': row['id'],
-            'name': row['employee_name'],
-            'employee_code': row['employee_code'],
-            'department_name': row['department_name'] ?? '',
-            'capacity_hours': row['capacity_hours'],
-            'assigned_hours': row['assigned_hours'],
-            'actual_hours': row['actual_hours'],
+            'id': id,
+            'name': data['employee_name'] ?? '',
+            'employee_code': data['employee_code'] ?? '',
+            'department_name': data['department_name'] ?? '',
+            'capacity_hours': capHours,
+            'assigned_hours': assHours,
+            'actual_hours': actHours,
             'percentage': pct,
             'factor': pct / 100.0,
             'percentage_text':
                 '${pct.toStringAsFixed(1).replaceAll('.', ',')}%',
             'is_overload':
                 pct > 100.0 ||
-                row['status'] == 'high' ||
-                row['status'] == 'overload',
-            'status': row['status'],
+                status == 'high' ||
+                status == 'overload',
+            'status': status,
           };
           workloadList.add(item);
           if (overloadedEmployee == null && item['is_overload'] == true) {
@@ -117,51 +123,52 @@ class DashboardQuery {
 
         // 5. Daftar Kehadiran Hari Ini (5 Teratas)
         List<Map<String, dynamic>> attendanceList = [];
-        if (latestDate != null) {
-          var attListRes = await connection.query(
+        if (latestDateStr != null && latestDateStr.isNotEmpty) {
+          var attListRes = await connection.execute(
             '''
             SELECT 
               a.id, a.clock_in, a.clock_out, a.overtime_minutes, a.status,
               e.full_name AS employee_name, e.employee_code
             FROM attendances a
             INNER JOIN employees e ON a.employee_id = e.id
-            WHERE a.attendance_date = ?
+            WHERE a.attendance_date = :att_date
             ORDER BY a.clock_in ASC, a.id ASC
             LIMIT 5
             ''',
-            [latestDate],
+            {'att_date': latestDateStr},
           );
-          for (var row in attListRes) {
+          for (var row in attListRes.rows) {
+            var data = row.assoc();
             String clockInStr = '-';
-            if (row['clock_in'] != null) {
-              final s = row['clock_in'].toString();
+            if (data['clock_in'] != null && data['clock_in']!.isNotEmpty) {
+              final s = data['clock_in']!;
               clockInStr = s.contains(' ')
                   ? s.split(' ')[1].substring(0, 5)
-                  : s.substring(0, 5);
+                  : (s.length >= 5 ? s.substring(0, 5) : s);
             }
             String clockOutStr = '-';
-            if (row['clock_out'] != null) {
-              final s = row['clock_out'].toString();
+            if (data['clock_out'] != null && data['clock_out']!.isNotEmpty) {
+              final s = data['clock_out']!;
               clockOutStr = s.contains(' ')
                   ? s.split(' ')[1].substring(0, 5)
-                  : s.substring(0, 5);
+                  : (s.length >= 5 ? s.substring(0, 5) : s);
             }
 
-            int otMin = int.tryParse(row['overtime_minutes'].toString()) ?? 0;
+            int otMin = int.tryParse(data['overtime_minutes'] ?? '') ?? 0;
             attendanceList.add({
-              'id': row['id'],
-              'employee_name': row['employee_name'],
+              'id': int.tryParse(data['id'] ?? '') ?? 0,
+              'employee_name': data['employee_name'] ?? '',
               'clock_in': clockInStr,
               'clock_out': clockOutStr,
               'is_overtime': otMin > 0,
               'overtime_minutes': otMin,
-              'status': row['status'],
+              'status': data['status'] ?? 'present',
             });
           }
         }
 
         // 6. Pekerjaan Mendekati Deadline (Tasks)
-        var taskListRes = await connection.query('''
+        var taskListRes = await connection.execute('''
           SELECT 
             t.id, t.title, t.priority, t.status, t.deadline,
             e.full_name AS assigned_to_name,
@@ -174,15 +181,16 @@ class DashboardQuery {
           LIMIT 5
           ''');
         List<Map<String, dynamic>> taskList = [];
-        for (var row in taskListRes) {
+        for (var row in taskListRes.rows) {
+          var data = row.assoc();
           taskList.add({
-            'id': row['id'],
-            'title': row['title'],
-            'assigned_to_name': row['assigned_to_name'],
-            'deadline': row['deadline'].toString().split(' ')[0],
-            'status': row['status'],
-            'priority': row['priority'],
-            'category_name': row['category_name'] ?? '',
+            'id': int.tryParse(data['id'] ?? '') ?? 0,
+            'title': data['title'] ?? '',
+            'assigned_to_name': data['assigned_to_name'] ?? '',
+            'deadline': (data['deadline'] ?? '').split(' ')[0],
+            'status': data['status'] ?? 'not_started',
+            'priority': data['priority'] ?? 'medium',
+            'category_name': data['category_name'] ?? '',
           });
         }
 

@@ -17,25 +17,47 @@ class KehadiranQuery {
           INNER JOIN departments d ON e.department_id = d.id
           ORDER BY a.attendance_date DESC, a.id DESC
         ''';
-        var results = await connection.query(query);
+        var results = await connection.execute(query);
         List<Map<String, dynamic>> list = [];
-        for (var row in results) {
+        for (var row in results.rows) {
+          var data = row.assoc();
+          int workingMinutes =
+              int.tryParse(data['working_minutes'] ?? '') ?? 0;
+          int overtimeMinutes =
+              int.tryParse(data['overtime_minutes'] ?? '') ?? 0;
+
+          String clockInStr = '-';
+          if (data['clock_in'] != null && data['clock_in']!.isNotEmpty) {
+            String s = data['clock_in']!;
+            clockInStr = s.contains(' ')
+                ? s.split(' ')[1].substring(0, 5)
+                : (s.length >= 5 ? s.substring(0, 5) : s);
+          }
+
+          String clockOutStr = '-';
+          if (data['clock_out'] != null && data['clock_out']!.isNotEmpty) {
+            String s = data['clock_out']!;
+            clockOutStr = s.contains(' ')
+                ? s.split(' ')[1].substring(0, 5)
+                : (s.length >= 5 ? s.substring(0, 5) : s);
+          }
+
           list.add({
-            'id': row['id'],
-            'attendance_date': row['attendance_date'].toString().split(' ')[0],
-            'clock_in': row['clock_in'] != null
-                ? row['clock_in'].toString().split(' ')[1].substring(0, 5)
-                : '-',
-            'clock_out': row['clock_out'] != null
-                ? row['clock_out'].toString().split(' ')[1].substring(0, 5)
-                : '-',
-            'working_hours': (row['working_minutes'] / 60).toStringAsFixed(1),
-            'overtime_minutes': row['overtime_minutes'],
-            'status': row['status'],
-            'notes': row['notes'] ?? '-',
-            'employee_name': row['employee_name'],
-            'employee_code': row['employee_code'],
-            'department_name': row['department_name'],
+            'id': int.tryParse(data['id'] ?? '') ?? 0,
+            'attendance_date':
+                (data['attendance_date'] ?? '').split(' ')[0],
+            'clock_in': clockInStr,
+            'clock_out': clockOutStr,
+            'working_hours': (workingMinutes / 60).toStringAsFixed(1),
+            'overtime_minutes': overtimeMinutes,
+            'status': data['status'] ?? 'present',
+            'notes':
+                (data['notes'] != null && data['notes']!.isNotEmpty)
+                    ? data['notes']!
+                    : '-',
+            'employee_name': data['employee_name'] ?? '',
+            'employee_code': data['employee_code'] ?? '',
+            'department_name': data['department_name'] ?? '',
           });
         }
         return list;

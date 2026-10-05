@@ -142,7 +142,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return MainLayout(
       title: 'Profil Saya',
       activeMenu: 'profile',
-      child: SingleChildScrollView(
+      child: Padding(
         padding: const EdgeInsets.all(24),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,

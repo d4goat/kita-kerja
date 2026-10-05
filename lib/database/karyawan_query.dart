@@ -14,26 +14,24 @@ class KaryawanQuery {
     try {
       var connection = await DatabaseConnection.getConnection();
       try {
+        Map<String, dynamic> params = {};
         List<String> conditions = [];
-        List<dynamic> params = [];
 
         if (search != null && search.trim().isNotEmpty) {
           conditions.add(
-            '(e.full_name LIKE ? OR e.employee_code LIKE ? OR e.email LIKE ?)',
+            '(e.full_name LIKE :search OR e.employee_code LIKE :search OR e.email LIKE :search)',
           );
-          params.add('%${search.trim()}%');
-          params.add('%${search.trim()}%');
-          params.add('%${search.trim()}%');
+          params['search'] = '%${search.trim()}%';
         }
 
         if (departmentId != null && departmentId > 0) {
-          conditions.add('e.department_id = ?');
-          params.add(departmentId);
+          conditions.add('e.department_id = :dept_id');
+          params['dept_id'] = departmentId;
         }
 
         if (status != null && status != 'all' && status.isNotEmpty) {
-          conditions.add('e.status = ?');
-          params.add(status);
+          conditions.add('e.status = :status');
+          params['status'] = status;
         }
 
         String whereClause = conditions.isNotEmpty
@@ -42,11 +40,14 @@ class KaryawanQuery {
         int offset = (page - 1) * pageSize;
 
         // Query total count
-        var countResult = await connection.query(
+        var countResult = await connection.execute(
           'SELECT COUNT(*) as total FROM employees e $whereClause',
           params,
         );
-        int total = countResult.first['total'] as int;
+        int total = 0;
+        if (countResult.rows.isNotEmpty) {
+          total = int.tryParse(countResult.rows.first.assoc()['total'] ?? '') ?? 0;
+        }
 
         // Query paginated list
         String query =
@@ -68,25 +69,27 @@ class KaryawanQuery {
           LIMIT $pageSize OFFSET $offset
         ''';
 
-        var results = await connection.query(query, params);
+        var results = await connection.execute(query, params);
         List<Map<String, dynamic>> list = [];
-        for (var row in results) {
+        for (var row in results.rows) {
+          var data = row.assoc();
           list.add({
-            'id': row['id'],
-            'employee_code': row['employee_code'],
-            'full_name': row['full_name'],
-            'email': row['email'] ?? '',
-            'phone': row['phone'] ?? '',
-            'join_date': row['join_date'].toString().split(' ')[0],
-            'status': row['status'],
-            'position_id': row['position_id'],
-            'department_id': row['department_id'],
-            'salary_type_id': row['salary_type_id'],
-            'work_schedule_id': row['work_schedule_id'],
-            'position_name': row['position_name'],
-            'department_name': row['department_name'],
-            'salary_type_name': row['salary_type_name'],
-            'work_schedule_name': row['work_schedule_name'],
+            'id': int.tryParse(data['id'] ?? '') ?? 0,
+            'employee_code': data['employee_code'] ?? '',
+            'full_name': data['full_name'] ?? '',
+            'email': data['email'] ?? '',
+            'phone': data['phone'] ?? '',
+            'join_date': (data['join_date'] ?? '').split(' ')[0],
+            'status': data['status'] ?? 'active',
+            'position_id': int.tryParse(data['position_id'] ?? '') ?? 0,
+            'department_id': int.tryParse(data['department_id'] ?? '') ?? 0,
+            'salary_type_id': int.tryParse(data['salary_type_id'] ?? '') ?? 0,
+            'work_schedule_id':
+                int.tryParse(data['work_schedule_id'] ?? '') ?? 0,
+            'position_name': data['position_name'] ?? '',
+            'department_name': data['department_name'] ?? '',
+            'salary_type_name': data['salary_type_name'] ?? '',
+            'work_schedule_name': data['work_schedule_name'] ?? '',
           });
         }
 
@@ -241,24 +244,24 @@ class KaryawanQuery {
     try {
       var connection = await DatabaseConnection.getConnection();
       try {
-        await connection.query(
+        await connection.execute(
           '''
           INSERT INTO employees 
           (employee_code, full_name, email, phone, position_id, department_id, salary_type_id, work_schedule_id, join_date, status)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (:employee_code, :full_name, :email, :phone, :position_id, :department_id, :salary_type_id, :work_schedule_id, :join_date, :status)
           ''',
-          [
-            employeeCode,
-            fullName,
-            email,
-            phone,
-            positionId,
-            departmentId,
-            salaryTypeId,
-            workScheduleId,
-            joinDate,
-            status,
-          ],
+          {
+            'employee_code': employeeCode,
+            'full_name': fullName,
+            'email': email,
+            'phone': phone,
+            'position_id': positionId,
+            'department_id': departmentId,
+            'salary_type_id': salaryTypeId,
+            'work_schedule_id': workScheduleId,
+            'join_date': joinDate,
+            'status': status,
+          },
         );
         return true;
       } finally {
@@ -287,25 +290,27 @@ class KaryawanQuery {
     try {
       var connection = await DatabaseConnection.getConnection();
       try {
-        await connection.query(
+        await connection.execute(
           '''
           UPDATE employees 
-          SET employee_code = ?, full_name = ?, email = ?, phone = ?, position_id = ?, department_id = ?, salary_type_id = ?, work_schedule_id = ?, join_date = ?, status = ?
-          WHERE id = ?
+          SET employee_code = :employee_code, full_name = :full_name, email = :email, phone = :phone, 
+              position_id = :position_id, department_id = :department_id, salary_type_id = :salary_type_id, 
+              work_schedule_id = :work_schedule_id, join_date = :join_date, status = :status
+          WHERE id = :id
           ''',
-          [
-            employeeCode,
-            fullName,
-            email,
-            phone,
-            positionId,
-            departmentId,
-            salaryTypeId,
-            workScheduleId,
-            joinDate,
-            status,
-            id,
-          ],
+          {
+            'employee_code': employeeCode,
+            'full_name': fullName,
+            'email': email,
+            'phone': phone,
+            'position_id': positionId,
+            'department_id': departmentId,
+            'salary_type_id': salaryTypeId,
+            'work_schedule_id': workScheduleId,
+            'join_date': joinDate,
+            'status': status,
+            'id': id,
+          },
         );
         return true;
       } finally {
@@ -323,10 +328,13 @@ class KaryawanQuery {
     try {
       var connection = await DatabaseConnection.getConnection();
       try {
-        await connection.query('UPDATE employees SET status = ? WHERE id = ?', [
-          newStatus,
-          id,
-        ]);
+        await connection.execute(
+          'UPDATE employees SET status = :status WHERE id = :id',
+          {
+            'status': newStatus,
+            'id': id,
+          },
+        );
         return true;
       } finally {
         await connection.close();

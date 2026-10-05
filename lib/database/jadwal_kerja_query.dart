@@ -8,19 +8,21 @@ class JadwalKerjaQuery {
     try {
       var connection = await DatabaseConnection.getConnection();
       try {
-        var results = await connection.query(
+        var results = await connection.execute(
           'SELECT id, name, start_time, end_time, break_minutes, working_hours, status FROM work_schedules ORDER BY id ASC',
         );
         List<Map<String, dynamic>> list = [];
-        for (var row in results) {
+        for (var row in results.rows) {
+          var data = row.assoc();
           list.add({
-            'id': row['id'],
-            'name': row['name'],
-            'start_time': row['start_time'].toString(),
-            'end_time': row['end_time'].toString(),
-            'break_minutes': row['break_minutes'],
-            'working_hours': row['working_hours'],
-            'status': row['status'],
+            'id': int.tryParse(data['id'] ?? '') ?? 0,
+            'name': data['name'] ?? '',
+            'start_time': data['start_time'] ?? '',
+            'end_time': data['end_time'] ?? '',
+            'break_minutes': int.tryParse(data['break_minutes'] ?? '') ?? 0,
+            'working_hours':
+                double.tryParse(data['working_hours'] ?? '') ?? 0.0,
+            'status': data['status'] ?? 'active',
           });
         }
         return list;
@@ -63,12 +65,18 @@ class JadwalKerjaQuery {
     try {
       var connection = await DatabaseConnection.getConnection();
       try {
-        await connection.query(
+        await connection.execute(
           '''
           INSERT INTO work_schedules (name, start_time, end_time, break_minutes, working_hours, status)
-          VALUES (?, ?, ?, ?, ?, 'active')
+          VALUES (:name, :start_time, :end_time, :break_minutes, :working_hours, 'active')
           ''',
-          [name, startTime, endTime, breakMinutes, workingHours],
+          {
+            'name': name,
+            'start_time': startTime,
+            'end_time': endTime,
+            'break_minutes': breakMinutes,
+            'working_hours': workingHours,
+          },
         );
         return true;
       } finally {
@@ -93,13 +101,21 @@ class JadwalKerjaQuery {
     try {
       var connection = await DatabaseConnection.getConnection();
       try {
-        await connection.query(
+        await connection.execute(
           '''
           UPDATE work_schedules 
-          SET name = ?, start_time = ?, end_time = ?, break_minutes = ?, working_hours = ?, status = ?
-          WHERE id = ?
+          SET name = :name, start_time = :start_time, end_time = :end_time, break_minutes = :break_minutes, working_hours = :working_hours, status = :status
+          WHERE id = :id
           ''',
-          [name, startTime, endTime, breakMinutes, workingHours, status, id],
+          {
+            'name': name,
+            'start_time': startTime,
+            'end_time': endTime,
+            'break_minutes': breakMinutes,
+            'working_hours': workingHours,
+            'status': status,
+            'id': id,
+          },
         );
         return true;
       } finally {
@@ -117,9 +133,12 @@ class JadwalKerjaQuery {
     try {
       var connection = await DatabaseConnection.getConnection();
       try {
-        await connection.query(
-          'UPDATE work_schedules SET status = ? WHERE id = ?',
-          [newStatus, id],
+        await connection.execute(
+          'UPDATE work_schedules SET status = :status WHERE id = :id',
+          {
+            'status': newStatus,
+            'id': id,
+          },
         );
         return true;
       } finally {

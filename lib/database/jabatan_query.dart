@@ -8,16 +8,17 @@ class JabatanQuery {
     try {
       var connection = await DatabaseConnection.getConnection();
       try {
-        var results = await connection.query(
+        var results = await connection.execute(
           'SELECT id, name, description, status FROM positions ORDER BY id ASC',
         );
         List<Map<String, dynamic>> list = [];
-        for (var row in results) {
+        for (var row in results.rows) {
+          var data = row.assoc();
           list.add({
-            'id': row['id'],
-            'name': row['name'],
-            'description': row['description'] ?? '',
-            'status': row['status'],
+            'id': int.tryParse(data['id'] ?? '') ?? 0,
+            'name': data['name'] ?? '',
+            'description': data['description'] ?? '',
+            'status': data['status'] ?? 'active',
           });
         }
         return list;
@@ -54,9 +55,12 @@ class JabatanQuery {
     try {
       var connection = await DatabaseConnection.getConnection();
       try {
-        await connection.query(
-          'INSERT INTO positions (name, description, status) VALUES (?, ?, "active")',
-          [name, description],
+        await connection.execute(
+          'INSERT INTO positions (name, description, status) VALUES (:name, :description, "active")',
+          {
+            'name': name,
+            'description': description,
+          },
         );
         return true;
       } finally {
@@ -78,9 +82,14 @@ class JabatanQuery {
     try {
       var connection = await DatabaseConnection.getConnection();
       try {
-        await connection.query(
-          'UPDATE positions SET name = ?, description = ?, status = ? WHERE id = ?',
-          [name, description, status, id],
+        await connection.execute(
+          'UPDATE positions SET name = :name, description = :description, status = :status WHERE id = :id',
+          {
+            'name': name,
+            'description': description,
+            'status': status,
+            'id': id,
+          },
         );
         return true;
       } finally {
@@ -98,10 +107,13 @@ class JabatanQuery {
     try {
       var connection = await DatabaseConnection.getConnection();
       try {
-        await connection.query('UPDATE positions SET status = ? WHERE id = ?', [
-          newStatus,
-          id,
-        ]);
+        await connection.execute(
+          'UPDATE positions SET status = :status WHERE id = :id',
+          {
+            'status': newStatus,
+            'id': id,
+          },
+        );
         return true;
       } finally {
         await connection.close();

@@ -1,4 +1,4 @@
-import 'package:mysql1/mysql1.dart';
+import 'package:mysql_client/mysql_client.dart';
 
 import 'package:kita_kerja/database/koneksi.dart';
 import 'package:kita_kerja/database/auth_query.dart';
@@ -59,7 +59,7 @@ class MySQLHelper {
   final DashboardQuery dashboard = DashboardQuery();
 
   /// Membuat koneksi ke Database MySQL
-  Future<MySqlConnection> getConnection() async {
+  Future<MySQLConnection> getConnection() async {
     return await DatabaseConnection.getConnection();
   }
 

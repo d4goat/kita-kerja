@@ -79,22 +79,19 @@ class PekerjaanQuery {
     try {
       var connection = await DatabaseConnection.getConnection();
       try {
+        Map<String, dynamic> params = {};
         List<String> conditions = [];
-        List<dynamic> params = [];
 
         if (search != null && search.trim().isNotEmpty) {
           conditions.add(
-            '(t.title LIKE ? OR t.description LIKE ? OR e.full_name LIKE ? OR jc.name LIKE ?)',
+            '(t.title LIKE :search OR t.description LIKE :search OR e.full_name LIKE :search OR jc.name LIKE :search)',
           );
-          params.add('%${search.trim()}%');
-          params.add('%${search.trim()}%');
-          params.add('%${search.trim()}%');
-          params.add('%${search.trim()}%');
+          params['search'] = '%${search.trim()}%';
         }
 
         if (status != null && status != 'all' && status.isNotEmpty) {
-          conditions.add('t.status = ?');
-          params.add(status);
+          conditions.add('t.status = :status');
+          params['status'] = status;
         }
 
         String whereClause = conditions.isNotEmpty
@@ -113,25 +110,30 @@ class PekerjaanQuery {
           $whereClause
           ORDER BY t.deadline ASC, t.id DESC
         ''';
-        var results = await connection.query(query, params);
+        var results = await connection.execute(query, params);
         List<Map<String, dynamic>> list = [];
-        for (var row in results) {
+        for (var row in results.rows) {
+          var data = row.assoc();
           list.add({
-            'id': row['id'],
-            'category_id': row['category_id'],
-            'created_by': row['created_by'],
-            'assigned_to': row['assigned_to'],
-            'title': row['title'],
-            'description': row['description'] ?? '',
-            'priority': row['priority'],
-            'status': row['status'],
-            'estimated_hours': double.tryParse(row['estimated_hours'].toString()) ?? 0.0,
-            'actual_hours': double.tryParse(row['actual_hours'].toString()) ?? 0.0,
-            'start_date': row['start_date'] != null ? row['start_date'].toString().split(' ')[0] : null,
-            'deadline': row['deadline'].toString().split(' ')[0],
-            'category_name': row['category_name'],
-            'assigned_to_name': row['assigned_to_name'],
-            'employee_code': row['employee_code'],
+            'id': int.tryParse(data['id'] ?? '') ?? 0,
+            'category_id': int.tryParse(data['category_id'] ?? '') ?? 0,
+            'created_by': int.tryParse(data['created_by'] ?? '') ?? 0,
+            'assigned_to': int.tryParse(data['assigned_to'] ?? '') ?? 0,
+            'title': data['title'] ?? '',
+            'description': data['description'] ?? '',
+            'priority': data['priority'] ?? 'medium',
+            'status': data['status'] ?? 'not_started',
+            'estimated_hours':
+                double.tryParse(data['estimated_hours'] ?? '') ?? 0.0,
+            'actual_hours':
+                double.tryParse(data['actual_hours'] ?? '') ?? 0.0,
+            'start_date': data['start_date'] != null
+                ? data['start_date']!.split(' ')[0]
+                : null,
+            'deadline': (data['deadline'] ?? '').split(' ')[0],
+            'category_name': data['category_name'] ?? '',
+            'assigned_to_name': data['assigned_to_name'] ?? '',
+            'employee_code': data['employee_code'] ?? '',
           });
         }
         return list;
@@ -161,25 +163,25 @@ class PekerjaanQuery {
     try {
       var connection = await DatabaseConnection.getConnection();
       try {
-        await connection.query(
+        await connection.execute(
           '''
           INSERT INTO tasks 
           (category_id, created_by, assigned_to, title, description, priority, status, estimated_hours, actual_hours, start_date, deadline)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (:category_id, :created_by, :assigned_to, :title, :description, :priority, :status, :estimated_hours, :actual_hours, :start_date, :deadline)
           ''',
-          [
-            categoryId,
-            createdBy,
-            assignedTo,
-            title,
-            description,
-            priority,
-            status,
-            estimatedHours,
-            actualHours,
-            startDate,
-            deadline,
-          ],
+          {
+            'category_id': categoryId,
+            'created_by': createdBy,
+            'assigned_to': assignedTo,
+            'title': title,
+            'description': description,
+            'priority': priority,
+            'status': status,
+            'estimated_hours': estimatedHours,
+            'actual_hours': actualHours,
+            'start_date': startDate,
+            'deadline': deadline,
+          },
         );
         return true;
       } finally {
@@ -188,12 +190,19 @@ class PekerjaanQuery {
     } catch (err) {
       Utils.logger.e('Error addTask: $err. Using fallback simulation.');
       int newId = _fallbackTasks.isNotEmpty
-          ? (_fallbackTasks.map((e) => e['id'] as int).reduce((a, b) => a > b ? a : b) + 1)
+          ? (_fallbackTasks
+                  .map((e) => e['id'] as int)
+                  .reduce((a, b) => a > b ? a : b) +
+              1)
           : 1;
       _fallbackTasks.insert(0, {
         'id': newId,
         'category_id': categoryId,
-        'category_name': categoryId == 1 ? 'Operasional' : categoryId == 2 ? 'Administrasi' : 'Teknologi',
+        'category_name': categoryId == 1
+            ? 'Operasional'
+            : categoryId == 2
+            ? 'Administrasi'
+            : 'Teknologi',
         'assigned_to': assignedTo,
         'assigned_to_name': 'Karyawan ($assignedTo)',
         'employee_code': 'EMP00$assignedTo',
@@ -227,29 +236,29 @@ class PekerjaanQuery {
     try {
       var connection = await DatabaseConnection.getConnection();
       try {
-        await connection.query(
+        await connection.execute(
           '''
           UPDATE tasks 
-          SET category_id = ?, assigned_to = ?, title = ?, description = ?, 
-              priority = ?, status = ?, estimated_hours = ?, actual_hours = ?, 
-              start_date = ?, deadline = ?,
-              completed_at = CASE WHEN ? = 'completed' AND completed_at IS NULL THEN NOW() ELSE completed_at END
-          WHERE id = ?
+          SET category_id = :category_id, assigned_to = :assigned_to, title = :title, description = :description, 
+              priority = :priority, status = :status, estimated_hours = :estimated_hours, actual_hours = :actual_hours, 
+              start_date = :start_date, deadline = :deadline,
+              completed_at = CASE WHEN :check_status = 'completed' AND completed_at IS NULL THEN NOW() ELSE completed_at END
+          WHERE id = :id
           ''',
-          [
-            categoryId,
-            assignedTo,
-            title,
-            description,
-            priority,
-            status,
-            estimatedHours,
-            actualHours,
-            startDate,
-            deadline,
-            status,
-            id,
-          ],
+          {
+            'category_id': categoryId,
+            'assigned_to': assignedTo,
+            'title': title,
+            'description': description,
+            'priority': priority,
+            'status': status,
+            'estimated_hours': estimatedHours,
+            'actual_hours': actualHours,
+            'start_date': startDate,
+            'deadline': deadline,
+            'check_status': status,
+            'id': id,
+          },
         );
         return true;
       } finally {
@@ -262,7 +271,11 @@ class PekerjaanQuery {
         _fallbackTasks[idx] = {
           ..._fallbackTasks[idx],
           'category_id': categoryId,
-          'category_name': categoryId == 1 ? 'Operasional' : categoryId == 2 ? 'Administrasi' : 'Teknologi',
+          'category_name': categoryId == 1
+              ? 'Operasional'
+              : categoryId == 2
+              ? 'Administrasi'
+              : 'Teknologi',
           'assigned_to': assignedTo,
           'title': title,
           'description': description ?? '',
@@ -283,14 +296,18 @@ class PekerjaanQuery {
     try {
       var connection = await DatabaseConnection.getConnection();
       try {
-        await connection.query(
+        await connection.execute(
           '''
           UPDATE tasks 
-          SET status = ?,
-              completed_at = CASE WHEN ? = 'completed' THEN NOW() ELSE NULL END
-          WHERE id = ?
+          SET status = :status,
+              completed_at = CASE WHEN :check_status = 'completed' THEN NOW() ELSE NULL END
+          WHERE id = :id
           ''',
-          [status, status, id],
+          {
+            'status': status,
+            'check_status': status,
+            'id': id,
+          },
         );
         return true;
       } finally {
@@ -311,7 +328,10 @@ class PekerjaanQuery {
     try {
       var connection = await DatabaseConnection.getConnection();
       try {
-        await connection.query('DELETE FROM tasks WHERE id = ?', [id]);
+        await connection.execute(
+          'DELETE FROM tasks WHERE id = :id',
+          {'id': id},
+        );
         return true;
       } finally {
         await connection.close();

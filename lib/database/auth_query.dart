@@ -11,28 +11,29 @@ class AuthQuery {
     try {
       var connection = await DatabaseConnection.getConnection();
       try {
-        var results = await connection.query(
+        var results = await connection.execute(
           '''
           SELECT u.id, u.name, u.email, u.password, u.phone, u.status, r.name AS role_name 
           FROM users u 
           INNER JOIN roles r ON u.role_id = r.id 
-          WHERE u.email = ? AND u.status = 'active'
+          WHERE u.email = :email AND u.status = 'active'
           LIMIT 1
           ''',
-          [email],
+          {'email': email},
         );
 
-        if (results.isNotEmpty) {
-          var row = results.first;
+        if (results.rows.isNotEmpty) {
+          var row = results.rows.first;
+          var data = row.assoc();
           // Catatan: Pada produksi gunakan hash verification (mis. bcrypt)
-          if (row['password'] == passwordInput || passwordInput.isNotEmpty) {
+          if (data['password'] == passwordInput || passwordInput.isNotEmpty) {
             return {
-              'id': row['id'],
-              'name': row['name'],
-              'email': row['email'],
-              'phone': row['phone'],
-              'role': row['role_name'],
-              'status': row['status'],
+              'id': int.tryParse(data['id'] ?? '') ?? 1,
+              'name': data['name'] ?? '',
+              'email': data['email'] ?? '',
+              'phone': data['phone'] ?? '',
+              'role': data['role_name'] ?? 'admin',
+              'status': data['status'] ?? 'active',
             };
           }
         }
@@ -77,12 +78,16 @@ class AuthQuery {
       var connection = await DatabaseConnection.getConnection();
       try {
         // Mendapatkan ID role admin (role_id = 1)
-        await connection.query(
+        await connection.execute(
           '''
           INSERT INTO users (role_id, name, email, password, status)
-          VALUES (1, ?, ?, ?, 'active')
+          VALUES (1, :name, :email, :password, 'active')
           ''',
-          [namaLengkap, email, password],
+          {
+            'name': namaLengkap,
+            'email': email,
+            'password': password,
+          },
         );
         return true;
       } finally {

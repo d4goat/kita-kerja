@@ -94,10 +94,9 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
     return MainLayout(
       title: 'Presensi & Kehadiran',
       activeMenu: 'kehadiran',
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Filter Bar
@@ -255,7 +254,6 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
             ],
           ),
         ),
-      ),
     );
   }
 }

@@ -12,18 +12,23 @@ class GajiQuery {
     try {
       var connection = await DatabaseConnection.getConnection();
       try {
-        List<String> conditions = ['s.period_month = ?', 's.period_year = ?'];
-        List<dynamic> params = [periodMonth, periodYear];
+        Map<String, dynamic> params = {
+          'month': periodMonth,
+          'year': periodYear,
+        };
+        List<String> conditions = [
+          's.period_month = :month',
+          's.period_year = :year',
+        ];
 
         if (departmentId != null && departmentId > 0) {
-          conditions.add('e.department_id = ?');
-          params.add(departmentId);
+          conditions.add('e.department_id = :dept_id');
+          params['dept_id'] = departmentId;
         }
 
         String whereClause = 'WHERE ${conditions.join(" AND ")}';
 
-        String query =
-            '''
+        String query = '''
           SELECT 
             s.id, s.employee_id, s.period_month, s.period_year,
             s.basic_salary, s.overtime_amount, s.bonus_amount, s.deduction_amount, s.net_salary, s.status, s.notes,
@@ -38,22 +43,28 @@ class GajiQuery {
           ORDER BY s.id ASC
         ''';
 
-        var results = await connection.query(query, params);
+        var results = await connection.execute(query, params);
         List<Map<String, dynamic>> list = [];
-        for (var row in results) {
+        for (var row in results.rows) {
+          var data = row.assoc();
           list.add({
-            'id': row['id'],
-            'employee_name': row['employee_name'],
-            'employee_code': row['employee_code'],
-            'department_name': row['department_name'],
-            'salary_type_name': row['salary_type_name'],
-            'basic_salary': row['basic_salary'],
-            'overtime_amount': row['overtime_amount'],
-            'bonus_amount': row['bonus_amount'],
-            'deduction_amount': row['deduction_amount'],
-            'net_salary': row['net_salary'],
-            'status': row['status'],
-            'notes': row['notes'] ?? '',
+            'id': int.tryParse(data['id'] ?? '') ?? 0,
+            'employee_name': data['employee_name'] ?? '',
+            'employee_code': data['employee_code'] ?? '',
+            'department_name': data['department_name'] ?? '',
+            'salary_type_name': data['salary_type_name'] ?? '',
+            'basic_salary':
+                double.tryParse(data['basic_salary'] ?? '') ?? 0.0,
+            'overtime_amount':
+                double.tryParse(data['overtime_amount'] ?? '') ?? 0.0,
+            'bonus_amount':
+                double.tryParse(data['bonus_amount'] ?? '') ?? 0.0,
+            'deduction_amount':
+                double.tryParse(data['deduction_amount'] ?? '') ?? 0.0,
+            'net_salary':
+                double.tryParse(data['net_salary'] ?? '') ?? 0.0,
+            'status': data['status'] ?? 'draft',
+            'notes': data['notes'] ?? '',
           });
         }
         return list;

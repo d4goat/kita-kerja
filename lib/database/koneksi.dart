@@ -1,4 +1,4 @@
-import 'package:mysql1/mysql1.dart';
+import 'package:mysql_client/mysql_client.dart';
 
 /// Class konfigurasi dan pengelola koneksi database MySQL
 class DatabaseConnection {
@@ -9,16 +9,17 @@ class DatabaseConnection {
   static String db = 'kerjakita';
 
   /// Membuat dan membuka koneksi ke Database MySQL
-  static Future<MySqlConnection> getConnection() async {
-    var settings = ConnectionSettings(
+  static Future<MySQLConnection> getConnection() async {
+    final conn = await MySQLConnection.createConnection(
       host: host,
       port: port,
-      user: user,
-      password: password.isEmpty ? null : password,
-      db: db,
-      timeout: const Duration(seconds: 3),
+      userName: user,
+      password: password,
+      databaseName: db,
+      secure: false,
     );
 
-    return await MySqlConnection.connect(settings);
+    await conn.connect();
+    return conn;
   }
 }
