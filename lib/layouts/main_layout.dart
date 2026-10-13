@@ -159,21 +159,22 @@ class _MainLayoutState extends State<MainLayout> {
                   ),
                   child: Row(
                     children: [
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: Utils.primary,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: Utils.border, width: 2),
-                        ),
-                        alignment: Alignment.center,
-                        child: const Text(
-                          'K',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w900,
+                      SizedBox(
+                        height: 35,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.black, width: 2),
+                            borderRadius: BorderRadius.circular(9),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Utils.border,
+                                offset: Offset(2, 2),
+                                blurRadius: 0,
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            child: Image.asset('assets/img/icon-v2.png'),
                           ),
                         ),
                       ),

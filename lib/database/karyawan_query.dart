@@ -46,7 +46,8 @@ class KaryawanQuery {
         );
         int total = 0;
         if (countResult.rows.isNotEmpty) {
-          total = int.tryParse(countResult.rows.first.assoc()['total'] ?? '') ?? 0;
+          total =
+              int.tryParse(countResult.rows.first.assoc()['total'] ?? '') ?? 0;
         }
 
         // Query paginated list
@@ -240,36 +241,62 @@ class KaryawanQuery {
     required int workScheduleId,
     required String joinDate,
     String status = 'active',
+    String? password,
   }) async {
     try {
       var connection = await DatabaseConnection.getConnection();
+      Utils.logger.i('addEmployee: connected! Executing transaction...');
       try {
-        await connection.execute(
-          '''
-          INSERT INTO employees 
-          (employee_code, full_name, email, phone, position_id, department_id, salary_type_id, work_schedule_id, join_date, status)
-          VALUES (:employee_code, :full_name, :email, :phone, :position_id, :department_id, :salary_type_id, :work_schedule_id, :join_date, :status)
-          ''',
-          {
-            'employee_code': employeeCode,
-            'full_name': fullName,
-            'email': email,
-            'phone': phone,
-            'position_id': positionId,
-            'department_id': departmentId,
-            'salary_type_id': salaryTypeId,
-            'work_schedule_id': workScheduleId,
-            'join_date': joinDate,
-            'status': status,
-          },
-        );
+        await connection.transactional((conn) async {
+          // 1. Insert into employees
+          await conn.execute(
+            '''
+            INSERT INTO employees 
+            (employee_code, full_name, email, phone, position_id, department_id, salary_type_id, work_schedule_id, join_date, status)
+            VALUES (:employee_code, :full_name, :email, :phone, :position_id, :department_id, :salary_type_id, :work_schedule_id, :join_date, :status)
+            ''',
+            {
+              'employee_code': employeeCode,
+              'full_name': fullName,
+              'email': email,
+              'phone': phone,
+              'position_id': positionId,
+              'department_id': departmentId,
+              'salary_type_id': salaryTypeId,
+              'work_schedule_id': workScheduleId,
+              'join_date': joinDate,
+              'status': status,
+            },
+          );
+
+          // 2. Insert into users if password provided so employee can login
+          if (password != null && password.trim().isNotEmpty) {
+            await conn.execute(
+              '''
+              INSERT INTO users (role_id, name, email, password, phone, status)
+              VALUES (3, :name, :email, :password, :phone, :status)
+              ''',
+              {
+                'name': fullName,
+                'email': email,
+                'password': password.trim(),
+                'phone': phone,
+                'status': status,
+              },
+            );
+          }
+        });
+
+        Utils.logger.i('addEmployee: Transaction completed successfully.');
         return true;
       } finally {
         await connection.close();
       }
-    } catch (err) {
-      Utils.logger.e('Error addEmployee: $err');
-      return true;
+    } catch (err, stack) {
+      Utils.logger.e(
+        'addEmployee MySQL error: $err\n$stack',
+      );
+      rethrow;
     }
   }
 
@@ -316,9 +343,11 @@ class KaryawanQuery {
       } finally {
         await connection.close();
       }
-    } catch (err) {
-      Utils.logger.e('Error updateEmployee: $err');
-      return true;
+    } catch (err, stack) {
+      Utils.logger.e(
+        'updateEmployee MySQL error: $err\n$stack',
+      );
+      rethrow;
     }
   }
 
@@ -330,18 +359,17 @@ class KaryawanQuery {
       try {
         await connection.execute(
           'UPDATE employees SET status = :status WHERE id = :id',
-          {
-            'status': newStatus,
-            'id': id,
-          },
+          {'status': newStatus, 'id': id},
         );
         return true;
       } finally {
         await connection.close();
       }
-    } catch (err) {
-      Utils.logger.e('Error toggleEmployeeStatus: $err');
-      return true;
+    } catch (err, stack) {
+      Utils.logger.e(
+        'toggleEmployeeStatus MySQL error: $err\n$stack',
+      );
+      rethrow;
     }
   }
 }

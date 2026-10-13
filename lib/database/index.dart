@@ -14,6 +14,7 @@ import 'package:kita_kerja/database/pekerjaan_query.dart';
 import 'package:kita_kerja/database/dashboard_query.dart';
 
 // Export all modular queries for direct imports
+export 'package:kita_kerja/database/db_exception.dart';
 export 'package:kita_kerja/database/koneksi.dart';
 export 'package:kita_kerja/database/auth_query.dart';
 export 'package:kita_kerja/database/jabatan_query.dart';
@@ -236,6 +237,7 @@ class MySQLHelper {
     required int workScheduleId,
     required String joinDate,
     String status = 'active',
+    String? password,
   }) => karyawan.addEmployee(
     employeeCode: employeeCode,
     fullName: fullName,
@@ -247,6 +249,7 @@ class MySQLHelper {
     workScheduleId: workScheduleId,
     joinDate: joinDate,
     status: status,
+    password: password,
   );
 
   Future<bool> updateEmployee({

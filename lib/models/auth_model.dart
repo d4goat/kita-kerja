@@ -25,8 +25,39 @@ class AuthModel extends ChangeNotifier {
   bool get isVerified => _isVerified;
   UserModel? get currentUser => _currentUser;
 
+  bool get isAdmin =>
+      _currentUser == null ||
+      _currentUser!.role.toLowerCase() == 'admin' ||
+      _currentUser!.role.toLowerCase() == 'owner';
+
+  bool get isManager =>
+      _currentUser != null &&
+      (_currentUser!.role.toLowerCase() == 'manager' ||
+          _currentUser!.role.toLowerCase() == 'supervisor');
+
+  bool get isEmployee =>
+      _currentUser != null &&
+      (_currentUser!.role.toLowerCase() == 'employee' ||
+          _currentUser!.role.toLowerCase() == 'karyawan' ||
+          _currentUser!.role.toLowerCase() == 'staff');
+
+  /// Dynamic initial route depending on user role
+  String get initialRouteForRole {
+    if (isEmployee) {
+      return '/kehadiran';
+    } else if (isManager) {
+      return '/pekerjaan';
+    } else {
+      return '/dashboard';
+    }
+  }
+
   // Default demo user (Admin / Owner Hendra Wijaya)
-  void loginDemoUser({String role = 'admin', String name = 'Hendra Wijaya', String email = 'hendra@kerjakita.com'}) {
+  void loginDemoUser({
+    String role = 'admin',
+    String name = 'Hendra Wijaya',
+    String email = 'hendra@kerjakita.com',
+  }) {
     _isVerified = true;
     _currentUser = UserModel(
       id: 1,
@@ -36,6 +67,29 @@ class AuthModel extends ChangeNotifier {
       phone: '081234567890',
     );
     notifyListeners();
+  }
+
+  // Login Demo Quick Role Switcher
+  void loginAsRole(String role) {
+    if (role == 'manager') {
+      loginDemoUser(
+        role: 'manager',
+        name: 'Budi Santoso',
+        email: 'budi.manager@kerjakita.com',
+      );
+    } else if (role == 'employee' || role == 'karyawan') {
+      loginDemoUser(
+        role: 'employee',
+        name: 'Citra Staff',
+        email: 'citra.staff@kerjakita.com',
+      );
+    } else {
+      loginDemoUser(
+        role: 'admin',
+        name: 'Hendra Wijaya',
+        email: 'hendra.admin@kerjakita.com',
+      );
+    }
   }
 
   void loginSuccess(UserModel user) {
@@ -50,7 +104,11 @@ class AuthModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updateProfile({required String name, required String email, String? phone}) {
+  void updateProfile({
+    required String name,
+    required String email,
+    String? phone,
+  }) {
     if (_currentUser != null) {
       _currentUser = UserModel(
         id: _currentUser!.id,
@@ -64,3 +122,4 @@ class AuthModel extends ChangeNotifier {
     }
   }
 }
+

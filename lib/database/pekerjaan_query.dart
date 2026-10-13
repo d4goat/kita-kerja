@@ -1,3 +1,4 @@
+import 'package:kita_kerja/database/db_exception.dart';
 import 'package:kita_kerja/database/koneksi.dart';
 import 'package:kita_kerja/lib/utils.dart';
 
@@ -188,34 +189,15 @@ class PekerjaanQuery {
         await connection.close();
       }
     } catch (err) {
-      Utils.logger.e('Error addTask: $err. Using fallback simulation.');
-      int newId = _fallbackTasks.isNotEmpty
-          ? (_fallbackTasks
-                  .map((e) => e['id'] as int)
-                  .reduce((a, b) => a > b ? a : b) +
-              1)
-          : 1;
-      _fallbackTasks.insert(0, {
-        'id': newId,
-        'category_id': categoryId,
-        'category_name': categoryId == 1
-            ? 'Operasional'
-            : categoryId == 2
-            ? 'Administrasi'
-            : 'Teknologi',
-        'assigned_to': assignedTo,
-        'assigned_to_name': 'Karyawan ($assignedTo)',
-        'employee_code': 'EMP00$assignedTo',
-        'title': title,
-        'description': description ?? '',
-        'priority': priority,
-        'status': status,
-        'estimated_hours': estimatedHours,
-        'actual_hours': actualHours,
-        'start_date': startDate,
-        'deadline': deadline,
-      });
-      return true;
+      if (DatabaseOfflineException.isConnectionError(err)) {
+        Utils.logger.w('MySQL Offline [pekerjaan_query.dart]: $err');
+        throw DatabaseOfflineException(
+          message: 'Koneksi ke server database gagal.',
+          originalError: err,
+        );
+      }
+      Utils.logger.e('MySQL Error [pekerjaan_query.dart]: $err');
+      rethrow;
     }
   }
 
@@ -265,29 +247,15 @@ class PekerjaanQuery {
         await connection.close();
       }
     } catch (err) {
-      Utils.logger.e('Error updateTask: $err. Updating fallback simulation.');
-      int idx = _fallbackTasks.indexWhere((t) => t['id'] == id);
-      if (idx != -1) {
-        _fallbackTasks[idx] = {
-          ..._fallbackTasks[idx],
-          'category_id': categoryId,
-          'category_name': categoryId == 1
-              ? 'Operasional'
-              : categoryId == 2
-              ? 'Administrasi'
-              : 'Teknologi',
-          'assigned_to': assignedTo,
-          'title': title,
-          'description': description ?? '',
-          'priority': priority,
-          'status': status,
-          'estimated_hours': estimatedHours,
-          'actual_hours': actualHours,
-          'start_date': startDate,
-          'deadline': deadline,
-        };
+      if (DatabaseOfflineException.isConnectionError(err)) {
+        Utils.logger.w('MySQL Offline [pekerjaan_query.dart]: $err');
+        throw DatabaseOfflineException(
+          message: 'Koneksi ke server database gagal.',
+          originalError: err,
+        );
       }
-      return true;
+      Utils.logger.e('MySQL Error [pekerjaan_query.dart]: $err');
+      rethrow;
     }
   }
 
@@ -314,12 +282,15 @@ class PekerjaanQuery {
         await connection.close();
       }
     } catch (err) {
-      Utils.logger.e('Error updateTaskStatus: $err');
-      int idx = _fallbackTasks.indexWhere((t) => t['id'] == id);
-      if (idx != -1) {
-        _fallbackTasks[idx]['status'] = status;
+      if (DatabaseOfflineException.isConnectionError(err)) {
+        Utils.logger.w('MySQL Offline [pekerjaan_query.dart]: $err');
+        throw DatabaseOfflineException(
+          message: 'Koneksi ke server database gagal.',
+          originalError: err,
+        );
       }
-      return true;
+      Utils.logger.e('MySQL Error [pekerjaan_query.dart]: $err');
+      rethrow;
     }
   }
 
@@ -337,9 +308,156 @@ class PekerjaanQuery {
         await connection.close();
       }
     } catch (err) {
-      Utils.logger.e('Error deleteTask: $err');
-      _fallbackTasks.removeWhere((t) => t['id'] == id);
-      return true;
+      if (DatabaseOfflineException.isConnectionError(err)) {
+        Utils.logger.w('MySQL Offline [pekerjaan_query.dart]: $err');
+        throw DatabaseOfflineException(
+          message: 'Koneksi ke server database gagal.',
+          originalError: err,
+        );
+      }
+      Utils.logger.e('MySQL Error [pekerjaan_query.dart]: $err');
+      rethrow;
+    }
+  }
+
+  /// SQL Query: Get Summary Metrics for Employee Jobdesk Dashboard (Screen 2 Data)
+  Future<Map<String, int>> getJobdeskSummaryMetrics({
+    required int employeeId,
+  }) async {
+    try {
+      var connection = await DatabaseConnection.getConnection();
+      try {
+        var results = await connection.execute(
+          '''
+          SELECT 
+            COUNT(CASE WHEN status IN ('not_started', 'in_progress', 'review') THEN 1 END) AS total_active,
+            COUNT(CASE WHEN status = 'not_started' THEN 1 END) AS not_started_count,
+            COUNT(CASE WHEN status = 'in_progress' THEN 1 END) AS in_progress_count,
+            COUNT(CASE WHEN status = 'completed' THEN 1 END) AS completed_count
+          FROM tasks
+          WHERE assigned_to = :assigned_to
+          ''',
+          {'assigned_to': employeeId},
+        );
+
+        if (results.rows.isNotEmpty) {
+          var data = results.rows.first.assoc();
+          return {
+            'total_active': int.tryParse(data['total_active'] ?? '') ?? 0,
+            'not_started_count': int.tryParse(data['not_started_count'] ?? '') ?? 0,
+            'in_progress_count': int.tryParse(data['in_progress_count'] ?? '') ?? 0,
+            'completed_count': int.tryParse(data['completed_count'] ?? '') ?? 0,
+          };
+        }
+        return {'total_active': 0, 'not_started_count': 0, 'in_progress_count': 0, 'completed_count': 0};
+      } finally {
+        await connection.close();
+      }
+    } catch (err) {
+      Utils.logger.w('Fallback getJobdeskSummaryMetrics: $err');
+      return {
+        'total_active': 3,
+        'not_started_count': 1,
+        'in_progress_count': 1,
+        'completed_count': 1,
+      };
+    }
+  }
+
+  /// SQL Query: Get Filtered Employee Jobdesk List (Screen 2 Table Data)
+  Future<List<Map<String, dynamic>>> getJobdeskList({
+    required int employeeId,
+    String? search,
+    String? status,
+    String? category,
+  }) async {
+    try {
+      var connection = await DatabaseConnection.getConnection();
+      try {
+        Map<String, dynamic> params = {'assigned_to': employeeId};
+        List<String> conditions = ['t.assigned_to = :assigned_to'];
+
+        if (search != null && search.trim().isNotEmpty) {
+          conditions.add('(t.title LIKE :search OR t.description LIKE :search)');
+          params['search'] = '%${search.trim()}%';
+        }
+
+        if (status != null && status.isNotEmpty && status.toUpperCase() != 'ALL') {
+          String dbStatus = status.toLowerCase().replaceAll(' ', '_');
+          if (dbStatus == 'sedang_dikerjakan') dbStatus = 'in_progress';
+          if (dbStatus == 'belum_mulai') dbStatus = 'not_started';
+          if (dbStatus == 'selesai') dbStatus = 'completed';
+          conditions.add('t.status = :status');
+          params['status'] = dbStatus;
+        }
+
+        if (category != null && category.isNotEmpty && category.toUpperCase() != 'ALL') {
+          conditions.add('jc.name = :category');
+          params['category'] = category;
+        }
+
+        String whereClause = 'WHERE ${conditions.join(" AND ")}';
+
+        String query = '''
+          SELECT 
+            t.id, t.title, t.description, t.priority, t.status, t.deadline,
+            jc.name AS category_name
+          FROM tasks t
+          INNER JOIN job_categories jc ON t.category_id = jc.id
+          $whereClause
+          ORDER BY t.deadline ASC, t.id DESC
+        ''';
+
+        var results = await connection.execute(query, params);
+        List<Map<String, dynamic>> list = [];
+        for (var row in results.rows) {
+          var data = row.assoc();
+          list.add({
+            'id': int.tryParse(data['id'] ?? '') ?? 0,
+            'title': data['title'] ?? '',
+            'description': data['description'] ?? '',
+            'category_name': data['category_name'] ?? 'Operasional',
+            'priority': data['priority'] ?? 'medium',
+            'deadline': (data['deadline'] ?? '').split(' ')[0],
+            'status': data['status'] ?? 'not_started',
+          });
+        }
+        return list;
+      } finally {
+        await connection.close();
+      }
+    } catch (err) {
+      Utils.logger.w('Fallback getJobdeskList: $err');
+      return [
+        {
+          'id': 1,
+          'title': 'Input data penjualan harian',
+          'description': 'Memasukkan data transaksi kasir harian ke spreadsheet',
+          'category_name': 'Operasional',
+          'priority': 'Tinggi',
+          'deadline': '2026-10-02',
+          'status': 'Sedang Dikerjakan',
+        },
+        {
+          'id': 2,
+          'title': 'Pengecekan stok opname bulanan',
+          'description': 'Melakukan validasi stok fisik gudang utama',
+          'category_name': 'Operasional',
+          'priority': 'Sedang',
+          'deadline': '2026-10-05',
+          'status': 'Belum Mulai',
+        },
+        {
+          'id': 3,
+          'title': 'Rekap absensi & klaim lembur',
+          'description': 'Menyusun laporan verifikasi kehadiran mingguan',
+          'category_name': 'Administrasi',
+          'priority': 'Normal',
+          'deadline': '2026-10-01',
+          'status': 'Selesai',
+        },
+      ];
     }
   }
 }
+

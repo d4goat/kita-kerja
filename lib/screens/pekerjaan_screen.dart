@@ -167,19 +167,30 @@ class _PekerjaanScreenState extends State<PekerjaanScreen> {
                       Navigator.pop(dialogContext);
                       final newVal = opt['val'] as String;
                       if (newVal != currentStatus) {
-                        await _dbHelper.updateTaskStatus(
-                          task['id'] as int,
-                          newVal,
-                        );
-                        _loadTasks();
-                        if (!mounted) return;
-                        Utils.toast(
-                          context,
-                          'Status tugas diubah menjadi ${_getStatusLabel(newVal)}',
-                          ToastificationType.success,
-                          Icons.check,
-                          Utils.success,
-                        );
+                        try {
+                          await _dbHelper.updateTaskStatus(
+                            task['id'] as int,
+                            newVal,
+                          );
+                          _loadTasks();
+                          if (!mounted) return;
+                          Utils.toast(
+                            context,
+                            'Status tugas diubah menjadi ${_getStatusLabel(newVal)}',
+                            ToastificationType.success,
+                            Icons.check,
+                            Utils.success,
+                          );
+                        } catch (err) {
+                          if (!mounted) return;
+                          Utils.toast(
+                            context,
+                            'Gagal mengubah status tugas: $err',
+                            ToastificationType.error,
+                            Icons.close,
+                            Utils.danger,
+                          );
+                        }
                       }
                     },
                     child: Container(

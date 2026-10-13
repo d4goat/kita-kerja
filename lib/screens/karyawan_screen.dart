@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:kita_kerja/database/index.dart';
 import 'package:kita_kerja/layouts/main_layout.dart';
 import 'package:kita_kerja/lib/utils.dart';
+import 'package:kita_kerja/models/auth_model.dart';
 import 'package:kita_kerja/widgets/neo_components.dart';
+import 'package:provider/provider.dart';
 import 'package:toastification/toastification.dart';
 
 class KaryawanScreen extends StatefulWidget {
@@ -121,19 +123,30 @@ class _KaryawanScreenState extends State<KaryawanScreen> {
             ElevatedButton(
               onPressed: () async {
                 Navigator.pop(dialogContext);
-                await _dbHelper.toggleEmployeeStatus(
-                  item['id'] as int,
-                  currentStatus,
-                );
-                _loadKaryawan();
-                if (!mounted) return;
-                Utils.toast(
-                  context,
-                  'Status karyawan ${item['full_name']} berhasil diperbarui',
-                  ToastificationType.success,
-                  Icons.check,
-                  Utils.success,
-                );
+                try {
+                  await _dbHelper.toggleEmployeeStatus(
+                    item['id'] as int,
+                    currentStatus,
+                  );
+                  _loadKaryawan();
+                  if (!mounted) return;
+                  Utils.toast(
+                    context,
+                    'Status karyawan ${item['full_name']} berhasil diperbarui',
+                    ToastificationType.success,
+                    Icons.check,
+                    Utils.success,
+                  );
+                } catch (err) {
+                  if (!mounted) return;
+                  Utils.toast(
+                    context,
+                    'Gagal memperbarui status karyawan: $err',
+                    ToastificationType.error,
+                    Icons.close,
+                    Utils.danger,
+                  );
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: currentStatus == 'active'
@@ -244,6 +257,21 @@ class _KaryawanScreenState extends State<KaryawanScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final auth = Provider.of<AuthModel>(context);
+    final user = auth.currentUser;
+    final role = user?.role.toLowerCase() ?? 'admin';
+
+    // Role-filtered Karyawan List
+    List<Map<String, dynamic>> displayKaryawan = _karyawanList;
+    if (role == 'employee' || role == 'karyawan' || role == 'staff') {
+      final uName = (user?.name ?? 'citra').toLowerCase();
+      displayKaryawan = _karyawanList.where((item) {
+        final name = (item['full_name'] ?? '').toString().toLowerCase();
+        final code = (item['employee_code'] ?? '').toString().toLowerCase();
+        return name.contains(uName) || uName.contains(name) || code == 'emp003';
+      }).toList();
+    }
+
     final totalPages = (_totalKaryawan / _pageSize).ceil();
 
     return MainLayout(
@@ -460,7 +488,7 @@ class _KaryawanScreenState extends State<KaryawanScreen> {
                   NeoTableHeaderCell('STATUS'),
                   NeoTableHeaderCell('AKSI'),
                 ],
-                rows: _karyawanList.map((emp) {
+                rows: displayKaryawan.map((emp) {
                   final isActive = emp['status'] == 'active';
                   return [
                     NeoTableCell(

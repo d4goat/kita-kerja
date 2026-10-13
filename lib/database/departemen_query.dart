@@ -1,3 +1,4 @@
+import 'package:kita_kerja/database/db_exception.dart';
 import 'package:kita_kerja/database/koneksi.dart';
 import 'package:kita_kerja/lib/utils.dart';
 
@@ -67,8 +68,15 @@ class DepartemenQuery {
         await connection.close();
       }
     } catch (err) {
-      Utils.logger.e('Error addDepartment: $err');
-      return true;
+      if (DatabaseOfflineException.isConnectionError(err)) {
+        Utils.logger.w('MySQL Offline [departemen_query.dart]: $err');
+        throw DatabaseOfflineException(
+          message: 'Koneksi ke server database gagal.',
+          originalError: err,
+        );
+      }
+      Utils.logger.e('MySQL Error [departemen_query.dart]: $err');
+      rethrow;
     }
   }
 
@@ -96,8 +104,15 @@ class DepartemenQuery {
         await connection.close();
       }
     } catch (err) {
-      Utils.logger.e('Error updateDepartment: $err');
-      return true;
+      if (DatabaseOfflineException.isConnectionError(err)) {
+        Utils.logger.w('MySQL Offline [departemen_query.dart]: $err');
+        throw DatabaseOfflineException(
+          message: 'Koneksi ke server database gagal.',
+          originalError: err,
+        );
+      }
+      Utils.logger.e('MySQL Error [departemen_query.dart]: $err');
+      rethrow;
     }
   }
 
@@ -119,8 +134,15 @@ class DepartemenQuery {
         await connection.close();
       }
     } catch (err) {
-      Utils.logger.e('Error toggleDepartmentStatus: $err');
-      return true;
+      if (DatabaseOfflineException.isConnectionError(err)) {
+        Utils.logger.w('MySQL Offline [departemen_query.dart]: $err');
+        throw DatabaseOfflineException(
+          message: 'Koneksi ke server database gagal.',
+          originalError: err,
+        );
+      }
+      Utils.logger.e('MySQL Error [departemen_query.dart]: $err');
+      rethrow;
     }
   }
 }

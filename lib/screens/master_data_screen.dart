@@ -267,105 +267,115 @@ class _MasterDataScreenState extends State<MasterDataScreen> {
                     final messenger = ScaffoldMessenger.of(context);
                     Navigator.pop(dialogContext);
 
-                    if (_selectedTabIndex == 4) {
-                      // Schedule
-                      final sTime = startTimeController.text.trim();
-                      final eTime = endTimeController.text.trim();
-                      final bMin =
-                          int.tryParse(breakMinutesController.text) ?? 60;
-                      final wHours =
-                          double.tryParse(workingHoursController.text) ?? 8.0;
+                    try {
+                      if (_selectedTabIndex == 4) {
+                        // Schedule
+                        final sTime = startTimeController.text.trim();
+                        final eTime = endTimeController.text.trim();
+                        final bMin =
+                            int.tryParse(breakMinutesController.text) ?? 60;
+                        final wHours =
+                            double.tryParse(workingHoursController.text) ?? 8.0;
 
-                      if (isEdit) {
-                        await _dbHelper.updateWorkSchedule(
-                          id: editItem['id'],
-                          name: name,
-                          startTime: sTime,
-                          endTime: eTime,
-                          breakMinutes: bMin,
-                          workingHours: wHours,
-                          status: status,
-                        );
+                        if (isEdit) {
+                          await _dbHelper.updateWorkSchedule(
+                            id: editItem['id'],
+                            name: name,
+                            startTime: sTime,
+                            endTime: eTime,
+                            breakMinutes: bMin,
+                            workingHours: wHours,
+                            status: status,
+                          );
+                        } else {
+                          await _dbHelper.addWorkSchedule(
+                            name: name,
+                            startTime: sTime,
+                            endTime: eTime,
+                            breakMinutes: bMin,
+                            workingHours: wHours,
+                          );
+                        }
                       } else {
-                        await _dbHelper.addWorkSchedule(
-                          name: name,
-                          startTime: sTime,
-                          endTime: eTime,
-                          breakMinutes: bMin,
-                          workingHours: wHours,
-                        );
+                        final desc = descController.text.trim();
+                        switch (_selectedTabIndex) {
+                          case 0:
+                            if (isEdit) {
+                              await _dbHelper.updatePosition(
+                                editItem['id'],
+                                name,
+                                desc,
+                                status,
+                              );
+                            } else {
+                              await _dbHelper.addPosition(name, desc);
+                            }
+                            break;
+                          case 1:
+                            if (isEdit) {
+                              await _dbHelper.updateDepartment(
+                                editItem['id'],
+                                name,
+                                desc,
+                                status,
+                              );
+                            } else {
+                              await _dbHelper.addDepartment(name, desc);
+                            }
+                            break;
+                          case 2:
+                            if (isEdit) {
+                              await _dbHelper.updateJobCategory(
+                                editItem['id'],
+                                name,
+                                desc,
+                                status,
+                              );
+                            } else {
+                              await _dbHelper.addJobCategory(name, desc);
+                            }
+                            break;
+                          case 3:
+                            if (isEdit) {
+                              await _dbHelper.updateSalaryType(
+                                editItem['id'],
+                                name,
+                                desc,
+                                status,
+                              );
+                            } else {
+                              await _dbHelper.addSalaryType(name, desc);
+                            }
+                            break;
+                        }
                       }
-                    } else {
-                      final desc = descController.text.trim();
-                      switch (_selectedTabIndex) {
-                        case 0:
-                          if (isEdit) {
-                            await _dbHelper.updatePosition(
-                              editItem['id'],
-                              name,
-                              desc,
-                              status,
-                            );
-                          } else {
-                            await _dbHelper.addPosition(name, desc);
-                          }
-                          break;
-                        case 1:
-                          if (isEdit) {
-                            await _dbHelper.updateDepartment(
-                              editItem['id'],
-                              name,
-                              desc,
-                              status,
-                            );
-                          } else {
-                            await _dbHelper.addDepartment(name, desc);
-                          }
-                          break;
-                        case 2:
-                          if (isEdit) {
-                            await _dbHelper.updateJobCategory(
-                              editItem['id'],
-                              name,
-                              desc,
-                              status,
-                            );
-                          } else {
-                            await _dbHelper.addJobCategory(name, desc);
-                          }
-                          break;
-                        case 3:
-                          if (isEdit) {
-                            await _dbHelper.updateSalaryType(
-                              editItem['id'],
-                              name,
-                              desc,
-                              status,
-                            );
-                          } else {
-                            await _dbHelper.addSalaryType(name, desc);
-                          }
-                          break;
-                      }
-                    }
 
-                    _loadData();
-                    messenger.showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          isEdit
-                              ? 'Data berhasil diperbarui!'
-                              : 'Data berhasil ditambahkan!',
+                      _loadData();
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            isEdit
+                                ? 'Data berhasil diperbarui!'
+                                : 'Data berhasil ditambahkan!',
+                          ),
+                          backgroundColor: Utils.success,
                         ),
-                        backgroundColor: Utils.success,
-                      ),
-                    );
+                      );
+                    } catch (err) {
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text('Gagal menyimpan data: $err'),
+                          backgroundColor: Utils.danger,
+                        ),
+                      );
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Utils.primary,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
+
                       side: const BorderSide(color: Utils.border, width: 2),
                     ),
                   ),

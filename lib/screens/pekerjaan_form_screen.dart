@@ -201,54 +201,70 @@ class _PekerjaanFormScreenState extends State<PekerjaanFormScreen> {
 
       setState(() => _isSaving = true);
 
-      if (isEdit) {
-        await _dbHelper.updateTask(
-          id: widget.taskToEdit!['id'] as int,
-          categoryId: _selectedCategoryId!,
-          assignedTo: _selectedAssignedTo!,
-          title: _titleController.text.trim(),
-          description: _descriptionController.text.trim(),
-          priority: _priority,
-          status: _status,
-          estimatedHours: estimated,
-          actualHours: actual,
-          startDate: _startDateController.text.trim().isNotEmpty
-              ? _startDateController.text.trim()
-              : null,
-          deadline: _deadlineController.text.trim(),
+      try {
+        if (isEdit) {
+          await _dbHelper.updateTask(
+            id: widget.taskToEdit!['id'] as int,
+            categoryId: _selectedCategoryId!,
+            assignedTo: _selectedAssignedTo!,
+            title: _titleController.text.trim(),
+            description: _descriptionController.text.trim(),
+            priority: _priority,
+            status: _status,
+            estimatedHours: estimated,
+            actualHours: actual,
+            startDate: _startDateController.text.trim().isNotEmpty
+                ? _startDateController.text.trim()
+                : null,
+            deadline: _deadlineController.text.trim(),
+          );
+        } else {
+          await _dbHelper.addTask(
+            categoryId: _selectedCategoryId!,
+            createdBy: 1, // Admin / user saat ini
+            assignedTo: _selectedAssignedTo!,
+            title: _titleController.text.trim(),
+            description: _descriptionController.text.trim(),
+            priority: _priority,
+            status: _status,
+            estimatedHours: estimated,
+            actualHours: actual,
+            startDate: _startDateController.text.trim().isNotEmpty
+                ? _startDateController.text.trim()
+                : null,
+            deadline: _deadlineController.text.trim(),
+          );
+        }
+
+        if (!mounted) return;
+        setState(() => _isSaving = false);
+
+        Utils.toast(
+          context,
+          isEdit
+              ? 'Pekerjaan berhasil diperbarui!'
+              : 'Pekerjaan baru berhasil dibuat & ditugaskan!',
+          ToastificationType.success,
+          Icons.check,
+          Utils.success,
         );
-      } else {
-        await _dbHelper.addTask(
-          categoryId: _selectedCategoryId!,
-          createdBy: 1, // Admin / user saat ini
-          assignedTo: _selectedAssignedTo!,
-          title: _titleController.text.trim(),
-          description: _descriptionController.text.trim(),
-          priority: _priority,
-          status: _status,
-          estimatedHours: estimated,
-          actualHours: actual,
-          startDate: _startDateController.text.trim().isNotEmpty
-              ? _startDateController.text.trim()
-              : null,
-          deadline: _deadlineController.text.trim(),
+
+        Navigator.pop(context, true);
+      } catch (err) {
+        if (!mounted) return;
+        setState(() => _isSaving = false);
+
+        String errStr = err.toString();
+        String errorMessage = 'Gagal menyimpan pekerjaan: $errStr';
+
+        Utils.toast(
+          context,
+          errorMessage,
+          ToastificationType.error,
+          Icons.close,
+          Utils.danger,
         );
       }
-
-      if (!mounted) return;
-      setState(() => _isSaving = false);
-
-      Utils.toast(
-        context,
-        isEdit
-            ? 'Pekerjaan berhasil diperbarui!'
-            : 'Pekerjaan baru berhasil dibuat & ditugaskan!',
-        ToastificationType.success,
-        Icons.check,
-        Utils.success,
-      );
-
-      Navigator.pop(context, true);
     }
   }
 
@@ -561,10 +577,11 @@ class _PekerjaanFormScreenState extends State<PekerjaanFormScreen> {
                                         ),
                                       ),
                                     ],
-                                    onChanged: (val) {
-                                      if (val != null)
-                                        setState(() => _priority = val);
-                                    },
+                                     onChanged: (val) {
+                                       if (val != null) {
+                                         setState(() => _priority = val);
+                                       }
+                                     },
                                   ),
                                 ],
                               ),
@@ -648,10 +665,11 @@ class _PekerjaanFormScreenState extends State<PekerjaanFormScreen> {
                                         ),
                                       ),
                                     ],
-                                    onChanged: (val) {
-                                      if (val != null)
-                                        setState(() => _status = val);
-                                    },
+                                     onChanged: (val) {
+                                       if (val != null) {
+                                         setState(() => _status = val);
+                                       }
+                                     },
                                   ),
                                 ],
                               ),

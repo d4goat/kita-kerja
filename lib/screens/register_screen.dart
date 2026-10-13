@@ -1,9 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:kita_kerja/database/index.dart';
 import 'package:kita_kerja/layouts/auth_layout.dart';
 import 'package:kita_kerja/lib/utils.dart';
 import 'package:kita_kerja/widgets/brand_header.dart';
 import 'package:kita_kerja/widgets/neo_components.dart';
+import 'package:mysql_client/mysql_protocol.dart';
 import 'package:toastification/toastification.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -33,6 +36,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  String _hashPassword(String password) {
+    var bytes = utf8.encode(password);
+    var digest = sha256(bytes);
+    return digest.toString();
+  }
+
   void _handleRegister() async {
     if (_formKey.currentState?.validate() ?? false) {
       if (_passwordController.text != _confirmPasswordController.text) {
@@ -48,29 +57,53 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       setState(() => _isLoading = true);
 
-      final success = await _dbHelper.registerOwner(
-        namaUsaha: _namaUsahaController.text.trim(),
-        namaLengkap: _namaLengkapController.text.trim(),
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
+      try {
+        String hashedPassword = _hashPassword(_passwordController.text);
 
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-
-      if (success) {
-        Utils.toast(
-          context,
-          'Pendaftaran akun Owner berhasil! SIlahkan masuk.',
-          ToastificationType.success,
-          Icons.check,
-          Utils.success,
+        final success = await _dbHelper.registerOwner(
+          namaUsaha: _namaUsahaController.text.trim(),
+          namaLengkap: _namaLengkapController.text.trim(),
+          email: _emailController.text.trim(),
+          password: hashedPassword,
         );
-        Navigator.pushReplacementNamed(context, '/login');
-      } else {
+
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+
+        if (success) {
+          Utils.toast(
+            context,
+            'Pendaftaran akun Owner berhasil! Silakan masuk.',
+            ToastificationType.success,
+            Icons.check,
+            Utils.success,
+          );
+          Navigator.pushReplacementNamed(context, '/login');
+        } else {
+          Utils.toast(
+            context,
+            'Gagal mendaftarkan akun. Silakan coba lagi.',
+            ToastificationType.error,
+            Icons.close,
+            Utils.danger,
+          );
+        }
+      } catch (err) {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+
+        String errStr = err.toString();
+        String msg = 'Gagal mendaftarkan akun: $errStr';
+
+        if (errStr.contains('1062') ||
+            errStr.toLowerCase().contains('duplicate entry')) {
+          msg =
+              'Email "${_emailController.text.trim()}" sudah terdaftar. Silakan gunakan email lain.';
+        }
+
         Utils.toast(
           context,
-          'Gagal mendaftarkan akun. Silahkan coba lagi.',
+          msg,
           ToastificationType.error,
           Icons.close,
           Utils.danger,

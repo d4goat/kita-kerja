@@ -1,9 +1,13 @@
+import 'package:kita_kerja/database/db_exception.dart';
 import 'package:kita_kerja/database/koneksi.dart';
 import 'package:kita_kerja/lib/utils.dart';
 
 /// Query database untuk model/object User & Autentikasi
 class AuthQuery {
-  /// SQL Query: User Login dengan JOIN ke tabel roles
+  /// SQL Query: User Login dengan JOIN ke tabel roles.
+  ///
+  /// Throws [DatabaseOfflineException] jika server MySQL tidak dapat dijangkau.
+  /// Returns `null` jika kredensial salah / user tidak ditemukan.
   Future<Map<String, dynamic>?> loginUser(
     String email,
     String passwordInput,
@@ -37,37 +41,28 @@ class AuthQuery {
             };
           }
         }
+        // Kredensial tidak cocok / user tidak ditemukan
+        return null;
       } finally {
         await connection.close();
       }
     } catch (err) {
-      Utils.logger.w(
-        'MySQL Offline/Error: $err. Using authentication fallback logic.',
-      );
-      // Fallback data demo untuk testing tanpa DB MySQL aktif
-      if (email.contains('admin') || email.isNotEmpty) {
-        return {
-          'id': 1,
-          'name': email.contains('manager')
-              ? 'Dimas Pratama'
-              : email.contains('karyawan')
-              ? 'Budi Santoso'
-              : 'Hendra Wijaya',
-          'email': email,
-          'phone': '081234567890',
-          'role': email.contains('manager')
-              ? 'manager'
-              : email.contains('karyawan')
-              ? 'employee'
-              : 'admin',
-          'status': 'active',
-        };
+      if (DatabaseOfflineException.isConnectionError(err)) {
+        Utils.logger.w('MySQL Offline: $err');
+        throw DatabaseOfflineException(
+          message: 'Server database tidak dapat dijangkau. Periksa koneksi MySQL Anda.',
+          originalError: err,
+        );
       }
+      // Error lain (mis. query syntax, auth MySQL)
+      Utils.logger.e('MySQL Login Error: $err');
+      rethrow;
     }
-    return null;
   }
 
-  /// SQL Query: Register User Owner/Admin baru
+  /// SQL Query: Register User Owner/Admin baru.
+  ///
+  /// Throws [DatabaseOfflineException] jika server MySQL tidak dapat dijangkau.
   Future<bool> registerOwner({
     required String namaUsaha,
     required String namaLengkap,
@@ -83,19 +78,22 @@ class AuthQuery {
           INSERT INTO users (role_id, name, email, password, status)
           VALUES (1, :name, :email, :password, 'active')
           ''',
-          {
-            'name': namaLengkap,
-            'email': email,
-            'password': password,
-          },
+          {'name': namaLengkap, 'email': email, 'password': password},
         );
         return true;
       } finally {
         await connection.close();
       }
     } catch (err) {
-      Utils.logger.w('MySQL Register Error / Offline: $err');
-      return true; // Fallback success for local dev
+      if (DatabaseOfflineException.isConnectionError(err)) {
+        Utils.logger.w('MySQL Offline (Register): $err');
+        throw DatabaseOfflineException(
+          message: 'Server database tidak dapat dijangkau. Registrasi gagal.',
+          originalError: err,
+        );
+      }
+      Utils.logger.e('MySQL Register Error: $err');
+      rethrow;
     }
   }
 

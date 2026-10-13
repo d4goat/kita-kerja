@@ -23,6 +23,8 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
   late TextEditingController _emailController;
   late TextEditingController _phoneController;
   late TextEditingController _joinDateController;
+  late TextEditingController _passwordController;
+  late TextEditingController _confirmPasswordController;
 
   int? _selectedPositionId;
   int? _selectedDepartmentId;
@@ -62,6 +64,8 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
           ? item!['join_date'].toString()
           : DateTime.now().toString().split(' ')[0],
     );
+    _passwordController = TextEditingController();
+    _confirmPasswordController = TextEditingController();
 
     if (isEdit) {
       _selectedPositionId = item!['position_id'] as int?;
@@ -112,6 +116,8 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
     _emailController.dispose();
     _phoneController.dispose();
     _joinDateController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -158,51 +164,103 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
         return;
       }
 
-      setState(() => _isSaving = true);
-
-      if (isEdit) {
-        await _dbHelper.updateEmployee(
-          id: widget.employeeToEdit!['id'] as int,
-          employeeCode: _codeController.text.trim(),
-          fullName: _nameController.text.trim(),
-          email: _emailController.text.trim(),
-          phone: _phoneController.text.trim(),
-          positionId: _selectedPositionId!,
-          departmentId: _selectedDepartmentId!,
-          salaryTypeId: _selectedSalaryTypeId!,
-          workScheduleId: _selectedWorkScheduleId!,
-          joinDate: _joinDateController.text.trim(),
-          status: _status,
+      if (_passwordController.text != _confirmPasswordController.text) {
+        Utils.toast(
+          context,
+          'Konfirmasi Kata sandi tidak sesuai',
+          ToastificationType.error,
+          Icons.close,
+          Utils.danger,
         );
-      } else {
-        await _dbHelper.addEmployee(
-          employeeCode: _codeController.text.trim(),
-          fullName: _nameController.text.trim(),
-          email: _emailController.text.trim(),
-          phone: _phoneController.text.trim(),
-          positionId: _selectedPositionId!,
-          departmentId: _selectedDepartmentId!,
-          salaryTypeId: _selectedSalaryTypeId!,
-          workScheduleId: _selectedWorkScheduleId!,
-          joinDate: _joinDateController.text.trim(),
-          status: _status,
-        );
+        return;
       }
 
-      if (!mounted) return;
-      setState(() => _isSaving = false);
+      if (!isEdit && _passwordController.text.trim().length < 8) {
+        Utils.toast(
+          context,
+          'Kata sandi minimal 8 karakter',
+          ToastificationType.error,
+          Icons.close,
+          Utils.danger,
+        );
+        return;
+      }
 
-      Utils.toast(
-        context,
-        isEdit
-            ? 'Data karyawan berhasil diperbarui!'
-            : 'Karyawan baru berhasil ditambahkan!',
-        ToastificationType.success,
-        Icons.check,
-        Utils.success,
-      );
+      setState(() => _isSaving = true);
 
-      Navigator.pop(context, true);
+      try {
+        if (isEdit) {
+          await _dbHelper.updateEmployee(
+            id: widget.employeeToEdit!['id'] as int,
+            employeeCode: _codeController.text.trim(),
+            fullName: _nameController.text.trim(),
+            email: _emailController.text.trim(),
+            phone: _phoneController.text.trim(),
+            positionId: _selectedPositionId!,
+            departmentId: _selectedDepartmentId!,
+            salaryTypeId: _selectedSalaryTypeId!,
+            workScheduleId: _selectedWorkScheduleId!,
+            joinDate: _joinDateController.text.trim(),
+            status: _status,
+          );
+        } else {
+          await _dbHelper.addEmployee(
+            employeeCode: _codeController.text.trim(),
+            fullName: _nameController.text.trim(),
+            email: _emailController.text.trim(),
+            phone: _phoneController.text.trim(),
+            positionId: _selectedPositionId!,
+            departmentId: _selectedDepartmentId!,
+            salaryTypeId: _selectedSalaryTypeId!,
+            workScheduleId: _selectedWorkScheduleId!,
+            joinDate: _joinDateController.text.trim(),
+            status: _status,
+            password: _passwordController.text,
+          );
+        }
+
+        if (!mounted) return;
+        setState(() => _isSaving = false);
+
+        Utils.toast(
+          context,
+          isEdit
+              ? 'Data karyawan berhasil diperbarui!'
+              : 'Karyawan baru berhasil ditambahkan!',
+          ToastificationType.success,
+          Icons.check,
+          Utils.success,
+        );
+
+        Navigator.pop(context, true);
+      } catch (err) {
+        if (!mounted) return;
+        setState(() => _isSaving = false);
+
+        String errStr = err.toString();
+        String errorMessage = 'Gagal menyimpan data karyawan: $errStr';
+
+        if (errStr.contains('1062') ||
+            errStr.toLowerCase().contains('duplicate entry')) {
+          if (errStr.contains('employee_code')) {
+            errorMessage =
+                'Kode Karyawan (NIK) "${_codeController.text.trim()}" sudah terdaftar. Harap gunakan NIK lain.';
+          } else if (errStr.contains('email')) {
+            errorMessage =
+                'Email "${_emailController.text.trim()}" sudah terdaftar. Harap gunakan Email lain.';
+          } else {
+            errorMessage = 'Gagal menyimpan: NIK atau Email yang dimasukkan sudah ada dalam database.';
+          }
+        }
+
+        Utils.toast(
+          context,
+          errorMessage,
+          ToastificationType.error,
+          Icons.close,
+          Utils.danger,
+        );
+      }
     }
   }
 
@@ -354,6 +412,68 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
                             ),
                           ],
                         ),
+
+                        // Password section — only for Add (not Edit)
+                        if (!isEdit) ...[
+                          const SizedBox(height: 16),
+                          const Text(
+                            'AKUN LOGIN KARYAWAN',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: Utils.primary,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Karyawan akan dapat login menggunakan email dan kata sandi ini.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF888888),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: NeoTextField(
+                                  label: 'Kata Sandi',
+                                  placeholder: 'Minimal 8 karakter',
+                                  controller: _passwordController,
+                                  isPassword: true,
+                                  validator: (val) {
+                                    if (val == null || val.isEmpty) {
+                                      return 'Kata sandi wajib diisi';
+                                    }
+                                    if (val.length < 8) {
+                                      return 'Minimal 8 karakter';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: NeoTextField(
+                                  label: 'Konfirmasi Kata Sandi',
+                                  placeholder: 'Ulangi kata sandi',
+                                  controller: _confirmPasswordController,
+                                  isPassword: true,
+                                  validator: (val) {
+                                    if (val == null || val.isEmpty) {
+                                      return 'Konfirmasi kata sandi wajib diisi';
+                                    }
+                                    if (val != _passwordController.text) {
+                                      return 'Kata sandi tidak cocok';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
 
                         const SizedBox(height: 24),
                         const Divider(color: Color(0xFFEEEEEE), height: 1),

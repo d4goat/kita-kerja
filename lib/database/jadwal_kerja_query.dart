@@ -1,3 +1,4 @@
+import 'package:kita_kerja/database/db_exception.dart';
 import 'package:kita_kerja/database/koneksi.dart';
 import 'package:kita_kerja/lib/utils.dart';
 
@@ -83,8 +84,15 @@ class JadwalKerjaQuery {
         await connection.close();
       }
     } catch (err) {
-      Utils.logger.e('Error addWorkSchedule: $err');
-      return true;
+      if (DatabaseOfflineException.isConnectionError(err)) {
+        Utils.logger.w('MySQL Offline [jadwal_kerja_query.dart]: $err');
+        throw DatabaseOfflineException(
+          message: 'Koneksi ke server database gagal.',
+          originalError: err,
+        );
+      }
+      Utils.logger.e('MySQL Error [jadwal_kerja_query.dart]: $err');
+      rethrow;
     }
   }
 
@@ -122,8 +130,15 @@ class JadwalKerjaQuery {
         await connection.close();
       }
     } catch (err) {
-      Utils.logger.e('Error updateWorkSchedule: $err');
-      return true;
+      if (DatabaseOfflineException.isConnectionError(err)) {
+        Utils.logger.w('MySQL Offline [jadwal_kerja_query.dart]: $err');
+        throw DatabaseOfflineException(
+          message: 'Koneksi ke server database gagal.',
+          originalError: err,
+        );
+      }
+      Utils.logger.e('MySQL Error [jadwal_kerja_query.dart]: $err');
+      rethrow;
     }
   }
 
@@ -145,8 +160,15 @@ class JadwalKerjaQuery {
         await connection.close();
       }
     } catch (err) {
-      Utils.logger.e('Error toggleWorkScheduleStatus: $err');
-      return true;
+      if (DatabaseOfflineException.isConnectionError(err)) {
+        Utils.logger.w('MySQL Offline [jadwal_kerja_query.dart]: $err');
+        throw DatabaseOfflineException(
+          message: 'Koneksi ke server database gagal.',
+          originalError: err,
+        );
+      }
+      Utils.logger.e('MySQL Error [jadwal_kerja_query.dart]: $err');
+      rethrow;
     }
   }
 }

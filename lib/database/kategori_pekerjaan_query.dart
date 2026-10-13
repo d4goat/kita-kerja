@@ -1,3 +1,4 @@
+import 'package:kita_kerja/database/db_exception.dart';
 import 'package:kita_kerja/database/koneksi.dart';
 import 'package:kita_kerja/lib/utils.dart';
 
@@ -67,8 +68,15 @@ class KategoriPekerjaanQuery {
         await connection.close();
       }
     } catch (err) {
-      Utils.logger.e('Error addJobCategory: $err');
-      return true;
+      if (DatabaseOfflineException.isConnectionError(err)) {
+        Utils.logger.w('MySQL Offline [kategori_pekerjaan_query.dart]: $err');
+        throw DatabaseOfflineException(
+          message: 'Koneksi ke server database gagal.',
+          originalError: err,
+        );
+      }
+      Utils.logger.e('MySQL Error [kategori_pekerjaan_query.dart]: $err');
+      rethrow;
     }
   }
 
@@ -96,8 +104,15 @@ class KategoriPekerjaanQuery {
         await connection.close();
       }
     } catch (err) {
-      Utils.logger.e('Error updateJobCategory: $err');
-      return true;
+      if (DatabaseOfflineException.isConnectionError(err)) {
+        Utils.logger.w('MySQL Offline [kategori_pekerjaan_query.dart]: $err');
+        throw DatabaseOfflineException(
+          message: 'Koneksi ke server database gagal.',
+          originalError: err,
+        );
+      }
+      Utils.logger.e('MySQL Error [kategori_pekerjaan_query.dart]: $err');
+      rethrow;
     }
   }
 
@@ -119,8 +134,15 @@ class KategoriPekerjaanQuery {
         await connection.close();
       }
     } catch (err) {
-      Utils.logger.e('Error toggleJobCategoryStatus: $err');
-      return true;
+      if (DatabaseOfflineException.isConnectionError(err)) {
+        Utils.logger.w('MySQL Offline [kategori_pekerjaan_query.dart]: $err');
+        throw DatabaseOfflineException(
+          message: 'Koneksi ke server database gagal.',
+          originalError: err,
+        );
+      }
+      Utils.logger.e('MySQL Error [kategori_pekerjaan_query.dart]: $err');
+      rethrow;
     }
   }
 }

@@ -37,38 +37,65 @@ class _LoginScreenState extends State<LoginScreen> {
       final email = _emailController.text.trim();
       final password = _passwordController.text;
 
-      final userData = await _dbHelper.loginUser(email, password);
+      try {
+        final userData = await _dbHelper.loginUser(email, password);
 
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-
-      if (userData != null) {
-        final user = UserModel(
-          id: userData['id'] is int ? userData['id'] : 1,
-          name: userData['name'],
-          email: userData['email'],
-          role: userData['role'],
-          phone: userData['phone'],
-          status: userData['status'],
-        );
-
-        Provider.of<AuthModel>(context, listen: false).loginSuccess(user);
-
-        Utils.toast(
-          context,
-          'Login berhasil sebagai ${user.name} (${user.role.toUpperCase()})!',
-          ToastificationType.success,
-          Icons.check,
-          Utils.success,
-        );
-
-        await Future.delayed(const Duration(milliseconds: 600));
         if (!mounted) return;
-        Navigator.pushReplacementNamed(context, '/dashboard');
-      } else {
+        setState(() => _isLoading = false);
+
+        if (userData != null) {
+          final user = UserModel(
+            id: userData['id'] is int ? userData['id'] : 1,
+            name: userData['name'],
+            email: userData['email'],
+            role: userData['role'],
+            phone: userData['phone'],
+            status: userData['status'],
+          );
+
+          final auth = Provider.of<AuthModel>(context, listen: false);
+          auth.loginSuccess(user);
+
+          final targetRoute = auth.initialRouteForRole;
+
+          Utils.toast(
+            context,
+            'Login berhasil sebagai ${user.name} (${user.role.toUpperCase()})!\nNavigasi otomatis ke: $targetRoute',
+            ToastificationType.success,
+            Icons.check,
+            Utils.success,
+          );
+
+          await Future.delayed(const Duration(milliseconds: 600));
+          if (!mounted) return;
+          Navigator.pushReplacementNamed(context, targetRoute);
+        } else {
+          Utils.toast(
+            context,
+            'Email atau kata sandi salah, silakan coba lagi.',
+            ToastificationType.error,
+            Icons.close,
+            Utils.danger,
+          );
+        }
+      } on DatabaseOfflineException catch (e) {
+        // Error koneksi MySQL — bukan salah email/password
+        if (!mounted) return;
+        setState(() => _isLoading = false);
         Utils.toast(
           context,
-          'Email atau kata sandi salah, silahkan coba lagi',
+          'Koneksi database gagal.\n${e.message}',
+          ToastificationType.warning,
+          Icons.wifi_off_rounded,
+          Utils.warning,
+        );
+      } catch (err) {
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+
+        Utils.toast(
+          context,
+          'Gagal melakukan autentikasi: $err',
           ToastificationType.error,
           Icons.close,
           Utils.danger,
@@ -92,7 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const BrandHeader(),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
                 const Text(
                   'Masuk ke Akun Anda',
                   style: TextStyle(
@@ -101,10 +128,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     color: Utils.border,
                   ),
                 ),
+
                 const SizedBox(height: 16),
+
                 NeoTextField(
                   label: 'Email',
-                  placeholder: 'nama@perusahaan.com',
+                  placeholder: 'admin@kerjakita.com / karyawan@...',
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   validator: (val) {
@@ -163,7 +192,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   isLoading: _isLoading,
                   onPressed: _handleLogin,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
                 Center(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,

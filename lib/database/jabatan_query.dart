@@ -1,3 +1,4 @@
+import 'package:kita_kerja/database/db_exception.dart';
 import 'package:kita_kerja/database/koneksi.dart';
 import 'package:kita_kerja/lib/utils.dart';
 
@@ -67,8 +68,15 @@ class JabatanQuery {
         await connection.close();
       }
     } catch (err) {
-      Utils.logger.e('Error addPosition: $err');
-      return true;
+      if (DatabaseOfflineException.isConnectionError(err)) {
+        Utils.logger.w('MySQL Offline [jabatan_query.dart]: $err');
+        throw DatabaseOfflineException(
+          message: 'Koneksi ke server database gagal.',
+          originalError: err,
+        );
+      }
+      Utils.logger.e('MySQL Error [jabatan_query.dart]: $err');
+      rethrow;
     }
   }
 
@@ -96,8 +104,15 @@ class JabatanQuery {
         await connection.close();
       }
     } catch (err) {
-      Utils.logger.e('Error updatePosition: $err');
-      return true;
+      if (DatabaseOfflineException.isConnectionError(err)) {
+        Utils.logger.w('MySQL Offline [jabatan_query.dart]: $err');
+        throw DatabaseOfflineException(
+          message: 'Koneksi ke server database gagal.',
+          originalError: err,
+        );
+      }
+      Utils.logger.e('MySQL Error [jabatan_query.dart]: $err');
+      rethrow;
     }
   }
 
@@ -119,8 +134,15 @@ class JabatanQuery {
         await connection.close();
       }
     } catch (err) {
-      Utils.logger.e('Error togglePositionStatus: $err');
-      return true;
+      if (DatabaseOfflineException.isConnectionError(err)) {
+        Utils.logger.w('MySQL Offline [jabatan_query.dart]: $err');
+        throw DatabaseOfflineException(
+          message: 'Koneksi ke server database gagal.',
+          originalError: err,
+        );
+      }
+      Utils.logger.e('MySQL Error [jabatan_query.dart]: $err');
+      rethrow;
     }
   }
 }

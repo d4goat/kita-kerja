@@ -87,8 +87,8 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
       final code = item['employee_code'].toString().toLowerCase();
       final q = _searchQuery.toLowerCase();
       final matchSearch = name.contains(q) || code.contains(q);
-      final matchStatus = _selectedStatus == 'all' || item['status'] == _selectedStatus;
-      return matchSearch && matchStatus;
+
+      return matchSearch;
     }).toList();
 
     return MainLayout(
@@ -97,7 +97,7 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Filter Bar
             Row(
@@ -118,7 +118,8 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: TextField(
-                            onChanged: (val) => setState(() => _searchQuery = val),
+                            onChanged: (val) =>
+                                setState(() => _searchQuery = val),
                             decoration: const InputDecoration(
                               hintText: 'Cari nama atau NIK karyawan...',
                               border: InputBorder.none,
@@ -126,7 +127,10 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
                               focusedBorder: InputBorder.none,
                               isDense: true,
                             ),
-                            style: const TextStyle(fontSize: 14, color: Utils.border),
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Utils.border,
+                            ),
                           ),
                         ),
                       ],
@@ -146,12 +150,28 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       value: _selectedStatus,
-                      icon: const Icon(Icons.arrow_drop_down, color: Utils.border),
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Utils.border),
+                      icon: const Icon(
+                        Icons.arrow_drop_down,
+                        color: Utils.border,
+                      ),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Utils.border,
+                      ),
                       items: const [
-                        DropdownMenuItem(value: 'all', child: Text('Semua Status')),
-                        DropdownMenuItem(value: 'present', child: Text('Hadir')),
-                        DropdownMenuItem(value: 'late', child: Text('Terlambat')),
+                        DropdownMenuItem(
+                          value: 'all',
+                          child: Text('Semua Status'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'present',
+                          child: Text('Hadir'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'late',
+                          child: Text('Terlambat'),
+                        ),
                         DropdownMenuItem(value: 'sick', child: Text('Sakit')),
                         DropdownMenuItem(value: 'leave', child: Text('Cuti')),
                         DropdownMenuItem(value: 'absent', child: Text('Alpa')),
@@ -168,92 +188,89 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
 
             // Attendances Table
             NeoTable(
-                isLoading: _isLoading,
-                emptyIcon: Icons.event_busy,
-                emptyText: 'Tidak ada riwayat kehadiran ditemukan',
-                columnWidths: const {
-                  0: FlexColumnWidth(2.0),
-                  1: FlexColumnWidth(1.2),
-                  2: FlexColumnWidth(1.0),
-                  3: FlexColumnWidth(1.0),
-                  4: FlexColumnWidth(1.2),
-                  5: FlexColumnWidth(1.2),
-                  6: FlexColumnWidth(1.8),
-                },
-                headers: const [
-                  NeoTableHeaderCell('KARYAWAN'),
-                  NeoTableHeaderCell('TANGGAL'),
-                  NeoTableHeaderCell('MASUK'),
-                  NeoTableHeaderCell('PULANG'),
-                  NeoTableHeaderCell('JAM KERJA'),
-                  NeoTableHeaderCell('STATUS'),
-                  NeoTableHeaderCell('CATATAN'),
-                ],
-                rows: filtered.map((att) {
-                  final st = att['status'].toString();
-                  return [
-                    NeoTableCell(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(
-                            att['employee_name'].toString(),
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: Utils.border,
-                            ),
+              isLoading: _isLoading,
+              emptyIcon: Icons.event_busy,
+              emptyText: 'Tidak ada riwayat kehadiran ditemukan',
+              columnWidths: const {
+                0: FlexColumnWidth(2.0),
+                1: FlexColumnWidth(1.2),
+                2: FlexColumnWidth(1.0),
+                3: FlexColumnWidth(1.0),
+                4: FlexColumnWidth(1.2),
+                5: FlexColumnWidth(1.2),
+                6: FlexColumnWidth(1.8),
+              },
+              headers: const [
+                NeoTableHeaderCell('KARYAWAN'),
+                NeoTableHeaderCell('TANGGAL'),
+                NeoTableHeaderCell('MASUK'),
+                NeoTableHeaderCell('PULANG'),
+                NeoTableHeaderCell('JAM KERJA'),
+                NeoTableHeaderCell('STATUS'),
+                NeoTableHeaderCell('CATATAN'),
+              ],
+              rows: filtered.map((att) {
+                final st = att['status'].toString();
+                return [
+                  NeoTableCell(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          att['employee_name'].toString(),
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: Utils.border,
                           ),
-                          Text(
-                            '${att['employee_code']} • ${att['department_name']}',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFF666666),
-                            ),
+                        ),
+                        Text(
+                          '${att['employee_code']} • ${att['department_name']}',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF666666),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    NeoTableCell(text: att['attendance_date'].toString()),
-                    NeoTableCell(text: att['clock_in'].toString()),
-                    NeoTableCell(text: att['clock_out'].toString()),
-                    NeoTableCell(text: '${att['working_hours']} Jam'),
-                    NeoTableCell(
-                      child: Align(
-                        alignment: Alignment.center,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _getStatusBg(st),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Utils.border,
-                              width: 1.5,
-                            ),
-                          ),
-                          child: Text(
-                            _getStatusLabel(st),
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              color: _getStatusText(st),
-                            ),
+                  ),
+                  NeoTableCell(text: att['attendance_date'].toString()),
+                  NeoTableCell(text: att['clock_in'].toString()),
+                  NeoTableCell(text: att['clock_out'].toString()),
+                  NeoTableCell(text: '${att['working_hours']} Jam'),
+                  NeoTableCell(
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _getStatusBg(st),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Utils.border, width: 1.5),
+                        ),
+                        child: Text(
+                          _getStatusLabel(st),
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: _getStatusText(st),
                           ),
                         ),
                       ),
                     ),
-                    NeoTableCell(text: (att['notes'] ?? '-').toString()),
-                  ];
-                }).toList(),
-              ),
-            ],
-          ),
+                  ),
+                  NeoTableCell(text: (att['notes'] ?? '-').toString()),
+                ];
+              }).toList(),
+            ),
+          ],
         ),
+      ),
     );
   }
 }
