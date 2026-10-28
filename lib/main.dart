@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:kita_kerja/lib/utils.dart';
-import 'package:kita_kerja/models/auth_model.dart';
+import 'package:kita_kerja/controllers/attendance_controller.dart';
+import 'package:kita_kerja/controllers/auth_controller.dart';
+import 'package:kita_kerja/controllers/dashboard_controller.dart';
+import 'package:kita_kerja/controllers/employee_controller.dart';
+import 'package:kita_kerja/controllers/master_data_controller.dart';
+import 'package:kita_kerja/controllers/salary_controller.dart';
+import 'package:kita_kerja/controllers/task_controller.dart';
+import 'package:kita_kerja/core/utils/utils.dart';
 import 'package:kita_kerja/screens/dashboard_screen.dart';
 import 'package:kita_kerja/screens/forgot_password_screen.dart';
 import 'package:kita_kerja/screens/forgot_password_success_screen.dart';
@@ -30,8 +36,16 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => AuthModel(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthController()),
+        ChangeNotifierProvider(create: (_) => AttendanceController()),
+        ChangeNotifierProvider(create: (_) => TaskController()),
+        ChangeNotifierProvider(create: (_) => DashboardController()),
+        ChangeNotifierProvider(create: (_) => EmployeeController()),
+        ChangeNotifierProvider(create: (_) => SalaryController()),
+        ChangeNotifierProvider(create: (_) => MasterDataController()),
+      ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
         title: 'KerjaKita',
@@ -110,28 +124,23 @@ class MyApp extends StatelessWidget {
             transitionDuration: const Duration(milliseconds: 2400),
             reverseTransitionDuration: const Duration(milliseconds: 2200),
             pageBuilder: (context, animation, secondaryAnimation) => page,
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-                  return Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      FadeTransition(
-                        opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
-                          CurvedAnimation(
-                            parent: animation,
-                            curve: const Interval(
-                              0.45,
-                              0.55,
-                              curve: Curves.easeIn,
-                            ),
-                          ),
-                        ),
-                        child: child,
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  FadeTransition(
+                    opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
+                      CurvedAnimation(
+                        parent: animation,
+                        curve: const Interval(0.45, 0.55, curve: Curves.easeIn),
                       ),
-                      SvgPathTransition(animation: animation),
-                    ],
-                  );
-                },
+                    ),
+                    child: child,
+                  ),
+                  SvgPathTransition(animation: animation),
+                ],
+              );
+            },
           );
         },
       ),

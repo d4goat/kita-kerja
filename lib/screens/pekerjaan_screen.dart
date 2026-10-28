@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:kita_kerja/database/index.dart';
+import 'package:kita_kerja/controllers/auth_controller.dart';
+import 'package:kita_kerja/controllers/task_controller.dart';
+import 'package:kita_kerja/core/utils/utils.dart';
 import 'package:kita_kerja/layouts/main_layout.dart';
-import 'package:kita_kerja/lib/utils.dart';
+import 'package:kita_kerja/models/task_model.dart';
 import 'package:kita_kerja/widgets/neo_components.dart';
+import 'package:provider/provider.dart';
 import 'package:toastification/toastification.dart';
 
 class PekerjaanScreen extends StatefulWidget {
@@ -13,25 +16,12 @@ class PekerjaanScreen extends StatefulWidget {
 }
 
 class _PekerjaanScreenState extends State<PekerjaanScreen> {
-  final MySQLHelper _dbHelper = MySQLHelper();
-  List<Map<String, dynamic>> _tasks = [];
-  bool _isLoading = true;
-  String _searchQuery = '';
-  String _selectedStatus = 'all';
-
   @override
   void initState() {
     super.initState();
-    _loadTasks();
-  }
-
-  Future<void> _loadTasks() async {
-    setState(() => _isLoading = true);
-    final data = await _dbHelper.getTasks();
-    if (!mounted) return;
-    setState(() {
-      _tasks = data;
-      _isLoading = false;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = Provider.of<AuthController>(context, listen: false);
+      Provider.of<TaskController>(context, listen: false).loadTasks(auth.currentUser);
     });
   }
 
@@ -63,21 +53,6 @@ class _PekerjaanScreenState extends State<PekerjaanScreen> {
     }
   }
 
-  String _getStatusLabel(String status) {
-    switch (status) {
-      case 'not_started':
-        return 'Belum Mulai';
-      case 'in_progress':
-        return 'Sedang Dikerjakan';
-      case 'review':
-        return 'Ditinjau';
-      case 'completed':
-        return 'Selesai';
-      default:
-        return status;
-    }
-  }
-
   Color _getStatusBg(String status) {
     switch (status) {
       case 'completed':
@@ -106,8 +81,24 @@ class _PekerjaanScreenState extends State<PekerjaanScreen> {
     }
   }
 
-  void _handleQuickStatusDialog(Map<String, dynamic> task) {
-    final currentStatus = task['status'].toString();
+  void _handleQuickStatusDialog(TaskModel task, TaskController controller, AuthController auth) {
+    final currentStatus = task.status;
+    final isEmployee = auth.isEmployee;
+
+    // Karyawan can only set to not_started, in_progress, or review (manager reviews to complete)
+    final options = isEmployee
+        ? [
+            {'val': 'not_started', 'label': 'Belum Mulai', 'color': Colors.grey},
+            {'val': 'in_progress', 'label': 'Sedang Dikerjakan', 'color': Utils.primary},
+            {'val': 'review', 'label': 'Minta Review (Ditinjau)', 'color': Utils.secondary},
+          ]
+        : [
+            {'val': 'not_started', 'label': 'Belum Mulai', 'color': Colors.grey},
+            {'val': 'in_progress', 'label': 'Sedang Dikerjakan', 'color': Utils.primary},
+            {'val': 'review', 'label': 'Ditinjau (Review)', 'color': Utils.secondary},
+            {'val': 'completed', 'label': 'Selesai (Completed)', 'color': Utils.success},
+          ];
+
     showDialog(
       context: context,
       builder: (dialogContext) {
@@ -117,47 +108,20 @@ class _PekerjaanScreenState extends State<PekerjaanScreen> {
             borderRadius: BorderRadius.circular(12),
             side: const BorderSide(color: Utils.border, width: 2),
           ),
-          title: Text(
+          title: const Text(
             'Ubah Status Pekerjaan',
-            style: const TextStyle(
-              fontWeight: FontWeight.w800,
-              color: Utils.border,
-            ),
+            style: TextStyle(fontWeight: FontWeight.w800, color: Utils.border),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Tugas: "${task['title']}"',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: Utils.border,
-                ),
+                'Tugas: "${task.title}"',
+                style: const TextStyle(fontWeight: FontWeight.w700, color: Utils.border),
               ),
               const SizedBox(height: 16),
-              ...[
-                {
-                  'val': 'not_started',
-                  'label': 'Belum Mulai',
-                  'color': Colors.grey,
-                },
-                {
-                  'val': 'in_progress',
-                  'label': 'Sedang Dikerjakan',
-                  'color': Utils.primary,
-                },
-                {
-                  'val': 'review',
-                  'label': 'Ditinjau (Review)',
-                  'color': Utils.secondary,
-                },
-                {
-                  'val': 'completed',
-                  'label': 'Selesai (Completed)',
-                  'color': Utils.success,
-                },
-              ].map((opt) {
+              ...options.map((opt) {
                 final isSelected = opt['val'] == currentStatus;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8),
@@ -167,46 +131,30 @@ class _PekerjaanScreenState extends State<PekerjaanScreen> {
                       Navigator.pop(dialogContext);
                       final newVal = opt['val'] as String;
                       if (newVal != currentStatus) {
-                        try {
-                          await _dbHelper.updateTaskStatus(
-                            task['id'] as int,
-                            newVal,
-                          );
-                          _loadTasks();
-                          if (!mounted) return;
+                        final ok = await controller.updateTaskStatus(
+                          taskId: task.id,
+                          status: newVal,
+                          currentUser: auth.currentUser,
+                          notes: isEmployee ? 'Update progres oleh ${auth.currentUser?.name}' : null,
+                        );
+                        if (ok && mounted) {
                           Utils.toast(
                             context,
-                            'Status tugas diubah menjadi ${_getStatusLabel(newVal)}',
+                            'Status tugas diubah menjadi ${opt['label']}',
                             ToastificationType.success,
                             Icons.check,
                             Utils.success,
-                          );
-                        } catch (err) {
-                          if (!mounted) return;
-                          Utils.toast(
-                            context,
-                            'Gagal mengubah status tugas: $err',
-                            ToastificationType.error,
-                            Icons.close,
-                            Utils.danger,
                           );
                         }
                       }
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
-                        color: isSelected
-                            ? const Color(0xFFF5F1E8)
-                            : Colors.white,
+                        color: isSelected ? const Color(0xFFF5F1E8) : Colors.white,
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: isSelected
-                              ? Utils.border
-                              : const Color(0xFFE0E0E0),
+                          color: isSelected ? Utils.border : const Color(0xFFE0E0E0),
                           width: isSelected ? 2 : 1,
                         ),
                       ),
@@ -218,10 +166,7 @@ class _PekerjaanScreenState extends State<PekerjaanScreen> {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: opt['color'] as Color,
-                              border: Border.all(
-                                color: Utils.border,
-                                width: 1.5,
-                              ),
+                              border: Border.all(color: Utils.border, width: 1.5),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -230,19 +175,12 @@ class _PekerjaanScreenState extends State<PekerjaanScreen> {
                               opt['label'] as String,
                               style: TextStyle(
                                 fontSize: 13,
-                                fontWeight: isSelected
-                                    ? FontWeight.w800
-                                    : FontWeight.w600,
+                                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                                 color: Utils.border,
                               ),
                             ),
                           ),
-                          if (isSelected)
-                            const Icon(
-                              Icons.check_circle,
-                              color: Utils.primary,
-                              size: 18,
-                            ),
+                          if (isSelected) const Icon(Icons.check_circle, color: Utils.primary, size: 18),
                         ],
                       ),
                     ),
@@ -256,9 +194,7 @@ class _PekerjaanScreenState extends State<PekerjaanScreen> {
               onPressed: () => Navigator.pop(dialogContext),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: Utils.border, width: 2),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
               child: const Text('Tutup', style: TextStyle(color: Utils.border)),
             ),
@@ -268,7 +204,7 @@ class _PekerjaanScreenState extends State<PekerjaanScreen> {
     );
   }
 
-  void _handleDeleteTask(Map<String, dynamic> task) {
+  void _handleDeleteTask(TaskModel task, TaskController controller, AuthController auth) {
     showDialog(
       context: context,
       builder: (dialogContext) {
@@ -283,7 +219,7 @@ class _PekerjaanScreenState extends State<PekerjaanScreen> {
             style: TextStyle(fontWeight: FontWeight.w800, color: Utils.border),
           ),
           content: Text(
-            'Apakah Anda yakin ingin menghapus pekerjaan "${task['title']}"?\nTindakan ini tidak dapat dibatalkan.',
+            'Apakah Anda yakin ingin menghapus pekerjaan "${task.title}"?\nTindakan ini tidak dapat dibatalkan.',
             style: const TextStyle(color: Utils.border),
           ),
           actions: [
@@ -291,25 +227,23 @@ class _PekerjaanScreenState extends State<PekerjaanScreen> {
               onPressed: () => Navigator.pop(dialogContext),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: Utils.border, width: 2),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
               child: const Text('Batal', style: TextStyle(color: Utils.border)),
             ),
             ElevatedButton(
               onPressed: () async {
                 Navigator.pop(dialogContext);
-                await _dbHelper.deleteTask(task['id'] as int);
-                _loadTasks();
-                if (!mounted) return;
-                Utils.toast(
-                  context,
-                  'Pekerjaan "${task['title']}" berhasil dihapus',
-                  ToastificationType.success,
-                  Icons.delete_outline,
-                  Utils.danger,
-                );
+                final ok = await controller.deleteTask(task.id, auth.currentUser);
+                if (ok && mounted) {
+                  Utils.toast(
+                    context,
+                    'Pekerjaan "${task.title}" berhasil dihapus',
+                    ToastificationType.success,
+                    Icons.delete_outline,
+                    Utils.danger,
+                  );
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Utils.danger,
@@ -327,350 +261,396 @@ class _PekerjaanScreenState extends State<PekerjaanScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final filtered = _tasks.where((item) {
-      final title = item['title'].toString().toLowerCase();
-      final emp = item['assigned_to_name'].toString().toLowerCase();
-      final cat = item['category_name'].toString().toLowerCase();
-      final q = _searchQuery.toLowerCase();
-      final matchSearch =
-          title.contains(q) || emp.contains(q) || cat.contains(q);
-      final matchStatus =
-          _selectedStatus == 'all' || item['status'] == _selectedStatus;
-      return matchSearch && matchStatus;
-    }).toList();
+  Widget _buildEmployeeMetricsHeader(TaskController controller) {
+    final m = controller.summaryMetrics;
+    return Row(
+      children: [
+        _buildMetricCard('TUGAS AKTIF', '${m['total_active'] ?? 0}', Utils.primary, Icons.assignment),
+        const SizedBox(width: 14),
+        _buildMetricCard('BELUM MULAI', '${m['not_started_count'] ?? 0}', Colors.grey, Icons.pending_actions),
+        const SizedBox(width: 14),
+        _buildMetricCard('SEDANG DIKERJAKAN', '${m['in_progress_count'] ?? 0}', Utils.secondary, Icons.run_circle_outlined),
+        const SizedBox(width: 14),
+        _buildMetricCard('MENUNGGU REVIEW', '${m['review_count'] ?? 0}', const Color(0xFFF59E0B), Icons.rate_review_outlined),
+        const SizedBox(width: 14),
+        _buildMetricCard('SELESAI', '${m['completed_count'] ?? 0}', Utils.success, Icons.check_circle_outline),
+      ],
+    );
+  }
 
-    return MainLayout(
-      title: 'Manajemen Pekerjaan',
-      activeMenu: 'pekerjaan',
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Controls Bar
-            Row(
-              children: [
-                // Search Box
-                Expanded(
-                  child: Container(
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Utils.border, width: 2),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.search, color: Utils.border, size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextField(
-                            onChanged: (val) =>
-                                setState(() => _searchQuery = val),
-                            decoration: const InputDecoration(
-                              hintText: 'Cari judul tugas, penanggung jawab, atau kategori...',
-                              border: InputBorder.none,
-                              enabledBorder: InputBorder.none,
-                              focusedBorder: InputBorder.none,
-                              isDense: true,
-                            ),
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Utils.border,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                // Filter Status Dropdown
-                Container(
-                  height: 42,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Utils.border, width: 2),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _selectedStatus,
-                      icon: const Icon(
-                        Icons.arrow_drop_down,
-                        color: Utils.border,
-                      ),
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: Utils.border,
-                      ),
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'all',
-                          child: Text('Semua Status'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'not_started',
-                          child: Text('Belum Mulai'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'in_progress',
-                          child: Text('Sedang Dikerjakan'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'review',
-                          child: Text('Ditinjau'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'completed',
-                          child: Text('Selesai'),
-                        ),
-                      ],
-                      onChanged: (val) {
-                        if (val != null) setState(() => _selectedStatus = val);
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                // Button Tambah Pekerjaan
-                SizedBox(
-                  width: 200,
-                  height: 42,
-                  child: NeoButton(
-                    text: '+ Tambah Pekerjaan',
-                    backgroundColor: Utils.primary,
-                    onPressed: () async {
-                      final result = await Navigator.pushNamed(
-                        context,
-                        '/pekerjaan-form',
-                      );
-                      if (result == true) {
-                        _loadTasks();
-                      }
-                    },
-                  ),
-                ),
-              ],
+  Widget _buildMetricCard(String title, String count, Color color, IconData icon) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Utils.border, width: 2),
+          boxShadow: const [
+            BoxShadow(
+              color: Utils.border,
+              offset: Offset(2, 2),
+              blurRadius: 0,
             ),
-            const SizedBox(height: 20),
-
-            // Tasks Table
-            NeoTable(
-              isLoading: _isLoading,
-              emptyIcon: Icons.assignment_turned_in_outlined,
-              emptyText: 'Tidak ada pekerjaan ditemukan',
-              columnWidths: const {
-                0: FlexColumnWidth(2.3),
-                1: FlexColumnWidth(1.2),
-                2: FlexColumnWidth(1.5),
-                3: FlexColumnWidth(1.0),
-                4: FlexColumnWidth(1.1),
-                5: FlexColumnWidth(1.6),
-                6: FlexColumnWidth(1.3),
-              },
-              headers: const [
-                NeoTableHeaderCell('JUDUL TUGAS'),
-                NeoTableHeaderCell('KATEGORI'),
-                NeoTableHeaderCell('PENANGGUNG JAWAB'),
-                NeoTableHeaderCell('PRIORITAS'),
-                NeoTableHeaderCell('DEADLINE'),
-                NeoTableHeaderCell('STATUS'),
-                NeoTableHeaderCell('AKSI'),
-              ],
-              rows: filtered.map((task) {
-                final priority = task['priority'].toString();
-                final st = task['status'].toString();
-                return [
-                  // Judul & Deskripsi
-                  NeoTableCell(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          task['title'].toString(),
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: Utils.border,
-                          ),
-                        ),
-                        if (task['description'].toString().isNotEmpty)
-                          Text(
-                            task['description'].toString(),
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFF666666),
-                            ),
-                          ),
-                      ],
-                    ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Utils.border, width: 1.5),
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF666666)),
                   ),
-                  // Kategori
-                  NeoTableCell(text: task['category_name'].toString()),
-                  // Penanggung Jawab
-                  NeoTableCell(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          task['assigned_to_name'].toString(),
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: Utils.border,
-                          ),
-                        ),
-                        Text(
-                          task['employee_code'].toString(),
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF666666),
-                          ),
-                        ),
-                      ],
-                    ),
+                  Text(
+                    count,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Utils.border),
                   ),
-                  // Priority Badge
-                  NeoTableCell(
-                    child: Align(
-                      alignment: Alignment.center,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _getPriorityBg(priority),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: Utils.border, width: 1.5),
-                        ),
-                        child: Text(
-                          priority.toUpperCase(),
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            color: _getPriorityText(priority),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Deadline
-                  NeoTableCell(text: task['deadline'].toString()),
-                  // Status Badge with Click to Change
-                  NeoTableCell(
-                    child: Align(
-                      alignment: Alignment.center,
-                      child: InkWell(
-                        onTap: () => _handleQuickStatusDialog(task),
-                        borderRadius: BorderRadius.circular(14),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 15,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: _getStatusBg(st),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: Utils.border, width: 1.5),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                _getStatusLabel(st),
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800,
-                                  color: _getStatusText(st),
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Icon(
-                                Icons.arrow_drop_down,
-                                size: 14,
-                                color: _getStatusText(st),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Aksi (Edit & Delete Buttons)
-                  NeoTableCell(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Edit Button
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Utils.secondary,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(width: 1.5, color: Utils.border),
-                          ),
-                          child: IconButton(
-                            icon: const Icon(
-                              Icons.edit_outlined,
-                              size: 16,
-                              color: Utils.border,
-                            ),
-                            tooltip: 'Sunting Pekerjaan',
-                            padding: const EdgeInsets.all(6),
-                            constraints: const BoxConstraints(),
-                            onPressed: () async {
-                              final result = await Navigator.pushNamed(
-                                context,
-                                '/pekerjaan-form',
-                                arguments: task,
-                              );
-                              if (result == true) {
-                                _loadTasks();
-                              }
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        // Delete Button
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Utils.danger,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(width: 1.5, color: Utils.border),
-                          ),
-                          child: IconButton(
-                            icon: const Icon(
-                              Icons.delete_outline,
-                              size: 16,
-                              color: Colors.white,
-                            ),
-                            tooltip: 'Hapus Pekerjaan',
-                            padding: const EdgeInsets.all(6),
-                            constraints: const BoxConstraints(),
-                            onPressed: () => _handleDeleteTask(task),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ];
-              }).toList(),
+                ],
+              ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = Provider.of<AuthController>(context);
+    final isEmployee = auth.isEmployee;
+
+    return Consumer<TaskController>(
+      builder: (context, controller, child) {
+        final filtered = controller.filteredTasks;
+
+        return MainLayout(
+          title: isEmployee ? 'Tugas Saya' : 'Manajemen Pekerjaan',
+          activeMenu: 'pekerjaan',
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // If Karyawan, show summary metrics banner
+                if (isEmployee) ...[
+                  _buildEmployeeMetricsHeader(controller),
+                  const SizedBox(height: 20),
+                ],
+
+                // Controls Bar
+                Row(
+                  children: [
+                    // Search Box
+                    Expanded(
+                      child: Container(
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Utils.border, width: 2),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.search, color: Utils.border, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextField(
+                                onChanged: (val) => controller.setSearchQuery(val),
+                                decoration: InputDecoration(
+                                  hintText: isEmployee
+                                      ? 'Cari judul tugas atau kategori saya...'
+                                      : 'Cari judul tugas, penanggung jawab, atau kategori...',
+                                  border: InputBorder.none,
+                                  enabledBorder: InputBorder.none,
+                                  focusedBorder: InputBorder.none,
+                                  isDense: true,
+                                ),
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Utils.border,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    // Filter Status Dropdown
+                    Container(
+                      height: 42,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Utils.border, width: 2),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: controller.selectedStatus,
+                          icon: const Icon(Icons.arrow_drop_down, color: Utils.border),
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Utils.border),
+                          items: const [
+                            DropdownMenuItem(value: 'all', child: Text('Semua Status')),
+                            DropdownMenuItem(value: 'not_started', child: Text('Belum Mulai')),
+                            DropdownMenuItem(value: 'in_progress', child: Text('Sedang Dikerjakan')),
+                            DropdownMenuItem(value: 'review', child: Text('Ditinjau')),
+                            DropdownMenuItem(value: 'completed', child: Text('Selesai')),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) controller.setSelectedStatus(val);
+                          },
+                        ),
+                      ),
+                    ),
+                    // Only Admin and Manager can add tasks
+                    if (!isEmployee) ...[
+                      const SizedBox(width: 16),
+                      SizedBox(
+                        width: 200,
+                        height: 42,
+                        child: NeoButton(
+                          text: '+ Tambah Pekerjaan',
+                          backgroundColor: Utils.primary,
+                          onPressed: () async {
+                            final result = await Navigator.pushNamed(context, '/pekerjaan-form');
+                            if (result == true && mounted) {
+                              controller.loadTasks(auth.currentUser);
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // Tasks Table
+                NeoTable(
+                  isLoading: controller.isLoading,
+                  emptyIcon: Icons.assignment_turned_in_outlined,
+                  emptyText: isEmployee ? 'Tidak ada pekerjaan yang ditugaskan kepada Anda' : 'Tidak ada data pekerjaan ditemukan',
+                  columnWidths: isEmployee
+                      ? const {
+                          0: FlexColumnWidth(2.5),
+                          1: FlexColumnWidth(1.2),
+                          2: FlexColumnWidth(1.0),
+                          3: FlexColumnWidth(1.4),
+                          4: FlexColumnWidth(1.2),
+                          5: FlexColumnWidth(1.2),
+                        }
+                      : const {
+                          0: FlexColumnWidth(2.2),
+                          1: FlexColumnWidth(1.5),
+                          2: FlexColumnWidth(1.1),
+                          3: FlexColumnWidth(1.0),
+                          4: FlexColumnWidth(1.3),
+                          5: FlexColumnWidth(1.1),
+                          6: FlexColumnWidth(1.5),
+                        },
+                  headers: isEmployee
+                      ? const [
+                          NeoTableHeaderCell('JUDUL PEKERJAAN'),
+                          NeoTableHeaderCell('KATEGORI'),
+                          NeoTableHeaderCell('PRIORITAS'),
+                          NeoTableHeaderCell('STATUS'),
+                          NeoTableHeaderCell('DEADLINE'),
+                          NeoTableHeaderCell('AKSI'),
+                        ]
+                      : const [
+                          NeoTableHeaderCell('JUDUL PEKERJAAN'),
+                          NeoTableHeaderCell('PENANGGUNG JAWAB'),
+                          NeoTableHeaderCell('KATEGORI'),
+                          NeoTableHeaderCell('PRIORITAS'),
+                          NeoTableHeaderCell('STATUS'),
+                          NeoTableHeaderCell('DEADLINE'),
+                          NeoTableHeaderCell('AKSI'),
+                        ],
+                  rows: filtered.map((task) {
+                    final rowCells = <NeoTableCell>[];
+
+                    // Title & Description
+                    rowCells.add(
+                      NeoTableCell(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              task.title,
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Utils.border),
+                            ),
+                            if (task.description.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                task.description,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 11, color: Color(0xFF666666)),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    );
+
+                    // Assigned To (only for admin/manager)
+                    if (!isEmployee) {
+                      rowCells.add(
+                        NeoTableCell(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                task.assignedToName,
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Utils.border),
+                              ),
+                              if (task.employeeCode.isNotEmpty)
+                                Text(
+                                  task.employeeCode,
+                                  style: const TextStyle(fontSize: 11, color: Color(0xFF666666)),
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+                    // Category
+                    rowCells.add(NeoTableCell(text: task.categoryName));
+
+                    // Priority Badge
+                    rowCells.add(
+                      NeoTableCell(
+                        child: Align(
+                          alignment: Alignment.center,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: _getPriorityBg(task.priority),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Utils.border, width: 1.5),
+                            ),
+                            child: Text(
+                              task.priorityLabel,
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: _getPriorityText(task.priority)),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+
+                    // Status Badge (Clickable to change status)
+                    rowCells.add(
+                      NeoTableCell(
+                        child: Align(
+                          alignment: Alignment.center,
+                          child: MouseRegion(
+                            cursor: SystemMouseCursors.click,
+                            child: GestureDetector(
+                              onTap: () => _handleQuickStatusDialog(task, controller, auth),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: _getStatusBg(task.status),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Utils.border, width: 1.5),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      task.statusLabel,
+                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: _getStatusText(task.status)),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Icon(Icons.edit_note, size: 14, color: _getStatusText(task.status)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+
+                    // Deadline
+                    rowCells.add(NeoTableCell(text: task.deadline));
+
+                    // Actions
+                    if (isEmployee) {
+                      // Karyawan only has update status button
+                      rowCells.add(
+                        NeoTableCell(
+                          child: Align(
+                            alignment: Alignment.center,
+                            child: OutlinedButton.icon(
+                              onPressed: () => _handleQuickStatusDialog(task, controller, auth),
+                              icon: const Icon(Icons.sync, size: 14, color: Utils.primary),
+                              label: const Text('Update Progres', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Utils.primary)),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Utils.primary, width: 1.5),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    } else {
+                      // Admin / Manager has full edit and delete
+                      rowCells.add(
+                        NeoTableCell(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined, color: Utils.primary, size: 18),
+                                tooltip: 'Edit Detail',
+                                onPressed: () async {
+                                  final result = await Navigator.pushNamed(
+                                    context,
+                                    '/pekerjaan-form',
+                                    arguments: task.toMap(),
+                                  );
+                                  if (result == true && mounted) {
+                                    controller.loadTasks(auth.currentUser);
+                                  }
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, color: Utils.danger, size: 18),
+                                tooltip: 'Hapus Pekerjaan',
+                                onPressed: () => _handleDeleteTask(task, controller, auth),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+                    return rowCells;
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

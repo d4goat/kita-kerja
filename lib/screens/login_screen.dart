@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:kita_kerja/database/index.dart';
+import 'package:kita_kerja/controllers/auth_controller.dart';
+import 'package:kita_kerja/core/utils/utils.dart';
+import 'package:kita_kerja/database/db_exception.dart';
 import 'package:kita_kerja/layouts/auth_layout.dart';
-import 'package:kita_kerja/lib/utils.dart';
-import 'package:kita_kerja/models/auth_model.dart';
 import 'package:kita_kerja/widgets/brand_header.dart';
 import 'package:kita_kerja/widgets/neo_components.dart';
 import 'package:provider/provider.dart';
@@ -19,7 +19,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController(text: '');
   final _passwordController = TextEditingController(text: '');
-  final MySQLHelper _dbHelper = MySQLHelper();
   bool _rememberMe = true;
   bool _isLoading = false;
 
@@ -36,26 +35,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final email = _emailController.text.trim();
       final password = _passwordController.text;
+      final auth = Provider.of<AuthController>(context, listen: false);
 
       try {
-        final userData = await _dbHelper.loginUser(email, password);
+        final user = await auth.login(email, password);
 
         if (!mounted) return;
         setState(() => _isLoading = false);
 
-        if (userData != null) {
-          final user = UserModel(
-            id: userData['id'] is int ? userData['id'] : 1,
-            name: userData['name'],
-            email: userData['email'],
-            role: userData['role'],
-            phone: userData['phone'],
-            status: userData['status'],
-          );
-
-          final auth = Provider.of<AuthModel>(context, listen: false);
-          auth.loginSuccess(user);
-
+        if (user != null) {
           final targetRoute = auth.initialRouteForRole;
 
           Utils.toast(
@@ -79,7 +67,6 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         }
       } on DatabaseOfflineException catch (e) {
-        // Error koneksi MySQL — bukan salah email/password
         if (!mounted) return;
         setState(() => _isLoading = false);
         Utils.toast(
@@ -101,6 +88,19 @@ class _LoginScreenState extends State<LoginScreen> {
           Utils.danger,
         );
       }
+    }
+  }
+
+  void _quickFill(String role) {
+    if (role == 'admin') {
+      _emailController.text = 'admin@kerjakita.local';
+      _passwordController.text = 'password';
+    } else if (role == 'manager') {
+      _emailController.text = 'manager@kerjakita.local';
+      _passwordController.text = 'password';
+    } else if (role == 'employee') {
+      _emailController.text = 'citra@kerjakita.local';
+      _passwordController.text = 'password';
     }
   }
 
@@ -128,12 +128,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     color: Utils.border,
                   ),
                 ),
-
                 const SizedBox(height: 16),
 
                 NeoTextField(
                   label: 'Email',
-                  placeholder: 'admin@kerjakita.com / karyawan@...',
+                  placeholder: 'admin@kerjakita.local / citra@...',
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   validator: (val) {
@@ -192,6 +191,64 @@ class _LoginScreenState extends State<LoginScreen> {
                   isLoading: _isLoading,
                   onPressed: _handleLogin,
                 ),
+                const SizedBox(height: 16),
+
+                // Quick Demo Account Helpers
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5F1E8),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Utils.border, width: 1.5),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Akun Demo (Klik untuk isi cepat):',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Utils.border),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => _quickFill('admin'),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Utils.border, width: 1.5),
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                              ),
+                              child: const Text('Admin', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Utils.border)),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => _quickFill('manager'),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Utils.border, width: 1.5),
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                              ),
+                              child: const Text('Manager', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Utils.border)),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => _quickFill('employee'),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Utils.border, width: 1.5),
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                              ),
+                              child: const Text('Karyawan', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Utils.border)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
                 const SizedBox(height: 16),
                 Center(
                   child: Row(

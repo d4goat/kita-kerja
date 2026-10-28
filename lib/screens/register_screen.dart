@@ -1,12 +1,11 @@
-import 'dart:convert';
-
+import 'package:bcrypt/bcrypt.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:kita_kerja/database/index.dart';
 import 'package:kita_kerja/layouts/auth_layout.dart';
 import 'package:kita_kerja/lib/utils.dart';
 import 'package:kita_kerja/widgets/brand_header.dart';
 import 'package:kita_kerja/widgets/neo_components.dart';
-import 'package:mysql_client/mysql_protocol.dart';
 import 'package:toastification/toastification.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -14,6 +13,10 @@ class RegisterScreen extends StatefulWidget {
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
+}
+
+String _hashPassword(String password) {
+  return BCrypt.hashpw(password, BCrypt.gensalt());
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
@@ -36,12 +39,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  String _hashPassword(String password) {
-    var bytes = utf8.encode(password);
-    var digest = sha256(bytes);
-    return digest.toString();
-  }
-
   void _handleRegister() async {
     if (_formKey.currentState?.validate() ?? false) {
       if (_passwordController.text != _confirmPasswordController.text) {
@@ -58,7 +55,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       setState(() => _isLoading = true);
 
       try {
-        String hashedPassword = _hashPassword(_passwordController.text);
+        String hashedPassword = await compute(
+          _hashPassword,
+          _passwordController.text,
+        );
 
         final success = await _dbHelper.registerOwner(
           namaUsaha: _namaUsahaController.text.trim(),
@@ -94,6 +94,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
         String errStr = err.toString();
         String msg = 'Gagal mendaftarkan akun: $errStr';
+        Utils.logger.e(msg);
 
         if (errStr.contains('1062') ||
             errStr.toLowerCase().contains('duplicate entry')) {
