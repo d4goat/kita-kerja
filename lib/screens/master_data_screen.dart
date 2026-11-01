@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:kita_kerja/database/index.dart';
+import 'package:kita_kerja/controllers/master_data_controller.dart';
 import 'package:kita_kerja/layouts/main_layout.dart';
 import 'package:kita_kerja/lib/utils.dart';
 import 'package:kita_kerja/widgets/neo_components.dart';
+import 'package:provider/provider.dart';
 
 class MasterDataScreen extends StatefulWidget {
   const MasterDataScreen({super.key});
@@ -12,13 +13,8 @@ class MasterDataScreen extends StatefulWidget {
 }
 
 class _MasterDataScreenState extends State<MasterDataScreen> {
-  final MySQLHelper _dbHelper = MySQLHelper();
-
   int _selectedTabIndex = 0; // 0: Jabatan, 1: Departemen, 2: Kategori Pekerjaan, 3: Jenis Gaji, 4: Jadwal Kerja
   String _searchQuery = '';
-  bool _isLoading = false;
-
-  List<Map<String, dynamic>> _dataList = [];
 
   final _tabs = [
     {
@@ -51,33 +47,8 @@ class _MasterDataScreenState extends State<MasterDataScreen> {
   @override
   void initState() {
     super.initState();
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
-    List<Map<String, dynamic>> result = [];
-    switch (_selectedTabIndex) {
-      case 0:
-        result = await _dbHelper.getPositions();
-        break;
-      case 1:
-        result = await _dbHelper.getDepartments();
-        break;
-      case 2:
-        result = await _dbHelper.getJobCategories();
-        break;
-      case 3:
-        result = await _dbHelper.getSalaryTypes();
-        break;
-      case 4:
-        result = await _dbHelper.getWorkSchedules();
-        break;
-    }
-    if (!mounted) return;
-    setState(() {
-      _dataList = result;
-      _isLoading = false;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<MasterDataController>().setSelectedTab(0);
     });
   }
 
@@ -268,6 +239,7 @@ class _MasterDataScreenState extends State<MasterDataScreen> {
                     Navigator.pop(dialogContext);
 
                     try {
+                      final ctrl = context.read<MasterDataController>();
                       if (_selectedTabIndex == 4) {
                         // Schedule
                         final sTime = startTimeController.text.trim();
@@ -278,7 +250,7 @@ class _MasterDataScreenState extends State<MasterDataScreen> {
                             double.tryParse(workingHoursController.text) ?? 8.0;
 
                         if (isEdit) {
-                          await _dbHelper.updateWorkSchedule(
+                          await ctrl.updateWorkSchedule(
                             id: editItem['id'],
                             name: name,
                             startTime: sTime,
@@ -288,7 +260,7 @@ class _MasterDataScreenState extends State<MasterDataScreen> {
                             status: status,
                           );
                         } else {
-                          await _dbHelper.addWorkSchedule(
+                          await ctrl.addWorkSchedule(
                             name: name,
                             startTime: sTime,
                             endTime: eTime,
@@ -301,56 +273,55 @@ class _MasterDataScreenState extends State<MasterDataScreen> {
                         switch (_selectedTabIndex) {
                           case 0:
                             if (isEdit) {
-                              await _dbHelper.updatePosition(
+                              await ctrl.updatePosition(
                                 editItem['id'],
                                 name,
                                 desc,
                                 status,
                               );
                             } else {
-                              await _dbHelper.addPosition(name, desc);
+                              await ctrl.addPosition(name, desc);
                             }
                             break;
                           case 1:
                             if (isEdit) {
-                              await _dbHelper.updateDepartment(
+                              await ctrl.updateDepartment(
                                 editItem['id'],
                                 name,
                                 desc,
                                 status,
                               );
                             } else {
-                              await _dbHelper.addDepartment(name, desc);
+                              await ctrl.addDepartment(name, desc);
                             }
                             break;
                           case 2:
                             if (isEdit) {
-                              await _dbHelper.updateJobCategory(
+                              await ctrl.updateJobCategory(
                                 editItem['id'],
                                 name,
                                 desc,
                                 status,
                               );
                             } else {
-                              await _dbHelper.addJobCategory(name, desc);
+                              await ctrl.addJobCategory(name, desc);
                             }
                             break;
                           case 3:
                             if (isEdit) {
-                              await _dbHelper.updateSalaryType(
+                              await ctrl.updateSalaryType(
                                 editItem['id'],
                                 name,
                                 desc,
                                 status,
                               );
                             } else {
-                              await _dbHelper.addSalaryType(name, desc);
+                              await ctrl.addSalaryType(name, desc);
                             }
                             break;
                         }
                       }
 
-                      _loadData();
                       messenger.showSnackBar(
                         SnackBar(
                           content: Text(
@@ -430,25 +401,25 @@ class _MasterDataScreenState extends State<MasterDataScreen> {
             ElevatedButton(
               onPressed: () async {
                 final messenger = ScaffoldMessenger.of(context);
+                final ctrl = context.read<MasterDataController>();
                 Navigator.pop(dialogContext);
                 switch (_selectedTabIndex) {
                   case 0:
-                    await _dbHelper.togglePositionStatus(id, currentStatus);
+                    await ctrl.togglePositionStatus(id, currentStatus);
                     break;
                   case 1:
-                    await _dbHelper.toggleDepartmentStatus(id, currentStatus);
+                    await ctrl.toggleDepartmentStatus(id, currentStatus);
                     break;
                   case 2:
-                    await _dbHelper.toggleJobCategoryStatus(id, currentStatus);
+                    await ctrl.toggleJobCategoryStatus(id, currentStatus);
                     break;
                   case 3:
-                    await _dbHelper.toggleSalaryTypeStatus(id, currentStatus);
+                    await ctrl.toggleSalaryTypeStatus(id, currentStatus);
                     break;
                   case 4:
-                    await _dbHelper.toggleWorkScheduleStatus(id, currentStatus);
+                    await ctrl.toggleWorkScheduleStatus(id, currentStatus);
                     break;
                 }
-                _loadData();
                 messenger.showSnackBar(
                   SnackBar(
                     content: Text('Status "$name" berhasil diubah!'),
@@ -478,7 +449,11 @@ class _MasterDataScreenState extends State<MasterDataScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filteredList = _dataList.where((item) {
+    final controller = context.watch<MasterDataController>();
+    final dataList = controller.currentDataList;
+    final isLoading = controller.isLoading;
+
+    final filteredList = dataList.where((item) {
       final name = item['name'].toString().toLowerCase();
       final desc = (item['description'] ?? '').toString().toLowerCase();
       final q = _searchQuery.toLowerCase();
@@ -510,7 +485,7 @@ class _MasterDataScreenState extends State<MasterDataScreen> {
                             _selectedTabIndex = index;
                             _searchQuery = '';
                           });
-                          _loadData();
+                          context.read<MasterDataController>().setSelectedTab(index);
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(
@@ -666,7 +641,7 @@ class _MasterDataScreenState extends State<MasterDataScreen> {
 
             // 5. DATA TABLE
             NeoTable(
-              isLoading: _isLoading,
+              isLoading: isLoading,
               emptyIcon: Icons.folder_off_outlined,
               emptyText: 'Tidak ada data ditemukan',
               columnWidths: _selectedTabIndex == 4

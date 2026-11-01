@@ -23,3 +23,4 @@ class DatabaseConnection {
     return conn;
   }
 }
+

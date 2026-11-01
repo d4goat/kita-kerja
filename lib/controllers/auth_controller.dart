@@ -49,6 +49,31 @@ class AuthController extends ChangeNotifier {
     }
   }
 
+  Future<bool> registerOwner({
+    required String namaUsaha,
+    required String namaLengkap,
+    required String email,
+    required String password,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      return await _repository.registerOwner(
+        namaUsaha: namaUsaha,
+        namaLengkap: namaLengkap,
+        email: email,
+        password: password,
+      );
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getUsers() async {
+    return await _repository.getUsers();
+  }
+
   void loginAsRole(String role) {
     _isVerified = true;
     if (role == 'manager' || role == 'supervisor') {

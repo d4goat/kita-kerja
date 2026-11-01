@@ -1,5 +1,5 @@
 import 'package:kita_kerja/core/utils/utils.dart';
-import 'package:kita_kerja/database/koneksi.dart';
+import 'package:kita_kerja/core/database/koneksi.dart';
 import 'package:kita_kerja/models/master_data_model.dart';
 
 class MasterDataRepository {

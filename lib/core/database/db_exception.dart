@@ -29,3 +29,4 @@ class DatabaseOfflineException implements Exception {
   @override
   String toString() => 'DatabaseOfflineException: $message';
 }
+

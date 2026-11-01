@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:kita_kerja/database/index.dart';
+import 'package:kita_kerja/controllers/employee_controller.dart';
 import 'package:kita_kerja/layouts/main_layout.dart';
 import 'package:kita_kerja/lib/utils.dart';
+import 'package:kita_kerja/repositories/master_data_repository.dart';
 import 'package:kita_kerja/widgets/neo_components.dart';
+import 'package:provider/provider.dart';
 import 'package:toastification/toastification.dart';
 
 class KaryawanFormScreen extends StatefulWidget {
@@ -16,7 +18,7 @@ class KaryawanFormScreen extends StatefulWidget {
 
 class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
   final _formKey = GlobalKey<FormState>();
-  final MySQLHelper _dbHelper = MySQLHelper();
+
 
   late TextEditingController _codeController;
   late TextEditingController _nameController;
@@ -79,10 +81,11 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
   }
 
   Future<void> _loadDropdownData() async {
-    final positions = await _dbHelper.getPositions();
-    final departments = await _dbHelper.getDepartments();
-    final salaryTypes = await _dbHelper.getSalaryTypes();
-    final workSchedules = await _dbHelper.getWorkSchedules();
+    final masterRepo = MasterDataRepository();
+    final positions = (await masterRepo.getPositions()).map((e) => e.toMap()).toList();
+    final departments = (await masterRepo.getDepartments()).map((e) => e.toMap()).toList();
+    final salaryTypes = (await masterRepo.getSalaryTypes()).map((e) => e.toMap()).toList();
+    final workSchedules = (await masterRepo.getWorkSchedules()).map((e) => e.toMap()).toList();
 
     if (!mounted) return;
     setState(() {
@@ -189,8 +192,9 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
       setState(() => _isSaving = true);
 
       try {
+        final empCtrl = context.read<EmployeeController>();
         if (isEdit) {
-          await _dbHelper.updateEmployee(
+          await empCtrl.updateEmployee(
             id: widget.employeeToEdit!['id'] as int,
             employeeCode: _codeController.text.trim(),
             fullName: _nameController.text.trim(),
@@ -204,7 +208,7 @@ class _KaryawanFormScreenState extends State<KaryawanFormScreen> {
             status: _status,
           );
         } else {
-          await _dbHelper.addEmployee(
+          await empCtrl.addEmployee(
             employeeCode: _codeController.text.trim(),
             fullName: _nameController.text.trim(),
             email: _emailController.text.trim(),

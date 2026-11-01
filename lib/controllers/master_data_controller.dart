@@ -23,6 +23,23 @@ class MasterDataController extends ChangeNotifier {
   List<SalaryTypeModel> get salaryTypes => _salaryTypes;
   List<WorkScheduleModel> get workSchedules => _workSchedules;
 
+  List<Map<String, dynamic>> get currentDataList {
+    switch (_selectedTabIndex) {
+      case 0:
+        return _positions.map((e) => e.toMap()).toList();
+      case 1:
+        return _departments.map((e) => e.toMap()).toList();
+      case 2:
+        return _jobCategories.map((e) => e.toMap()).toList();
+      case 3:
+        return _salaryTypes.map((e) => e.toMap()).toList();
+      case 4:
+        return _workSchedules.map((e) => e.toMap()).toList();
+      default:
+        return [];
+    }
+  }
+
   void setSelectedTab(int index) {
     _selectedTabIndex = index;
     loadCurrentTab();

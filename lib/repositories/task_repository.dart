@@ -1,5 +1,5 @@
 import 'package:kita_kerja/core/utils/utils.dart';
-import 'package:kita_kerja/database/koneksi.dart';
+import 'package:kita_kerja/core/database/koneksi.dart';
 import 'package:kita_kerja/models/task_model.dart';
 
 class TaskRepository {
@@ -87,10 +87,7 @@ class TaskRepository {
     ),
   ];
 
-  Future<List<TaskModel>> getTasks({
-    String? search,
-    String? status,
-  }) async {
+  Future<List<TaskModel>> getTasks({String? search, String? status}) async {
     try {
       var connection = await DatabaseConnection.getConnection();
       try {
@@ -113,7 +110,8 @@ class TaskRepository {
             ? 'WHERE ${conditions.join(" AND ")}'
             : '';
 
-        String query = '''
+        String query =
+            '''
           SELECT 
             t.id, t.category_id, t.created_by, t.assigned_to, t.title, t.description,
             t.priority, t.status, t.estimated_hours, t.actual_hours, t.start_date, t.deadline, t.completed_at,
@@ -126,7 +124,9 @@ class TaskRepository {
           ORDER BY t.deadline ASC, t.id DESC
         ''';
         var results = await connection.execute(query, params);
-        return results.rows.map((row) => TaskModel.fromMap(row.assoc())).toList();
+        return results.rows
+            .map((row) => TaskModel.fromMap(row.assoc()))
+            .toList();
       } finally {
         await connection.close();
       }
@@ -135,7 +135,13 @@ class TaskRepository {
       var list = List<TaskModel>.from(_fallbackTasks);
       if (search != null && search.isNotEmpty) {
         final q = search.toLowerCase();
-        list = list.where((t) => t.title.toLowerCase().contains(q) || t.assignedToName.toLowerCase().contains(q)).toList();
+        list = list
+            .where(
+              (t) =>
+                  t.title.toLowerCase().contains(q) ||
+                  t.assignedToName.toLowerCase().contains(q),
+            )
+            .toList();
       }
       if (status != null && status != 'all') {
         list = list.where((t) => t.status == status).toList();
@@ -156,7 +162,9 @@ class TaskRepository {
         List<String> conditions = ['t.assigned_to = :assigned_to'];
 
         if (search != null && search.trim().isNotEmpty) {
-          conditions.add('(t.title LIKE :search OR t.description LIKE :search OR jc.name LIKE :search)');
+          conditions.add(
+            '(t.title LIKE :search OR t.description LIKE :search OR jc.name LIKE :search)',
+          );
           params['search'] = '%${search.trim()}%';
         }
 
@@ -167,7 +175,8 @@ class TaskRepository {
 
         String whereClause = 'WHERE ${conditions.join(" AND ")}';
 
-        String query = '''
+        String query =
+            '''
           SELECT 
             t.id, t.category_id, t.created_by, t.assigned_to, t.title, t.description,
             t.priority, t.status, t.estimated_hours, t.actual_hours, t.start_date, t.deadline, t.completed_at,
@@ -180,13 +189,17 @@ class TaskRepository {
           ORDER BY t.deadline ASC, t.id DESC
         ''';
         var results = await connection.execute(query, params);
-        return results.rows.map((row) => TaskModel.fromMap(row.assoc())).toList();
+        return results.rows
+            .map((row) => TaskModel.fromMap(row.assoc()))
+            .toList();
       } finally {
         await connection.close();
       }
     } catch (err) {
       Utils.logger.w('MySQL MyTasks Fallback: $err');
-      var list = _fallbackTasks.where((t) => t.assignedTo == employeeId).toList();
+      var list = _fallbackTasks
+          .where((t) => t.assignedTo == employeeId)
+          .toList();
       if (search != null && search.isNotEmpty) {
         final q = search.toLowerCase();
         list = list.where((t) => t.title.toLowerCase().contains(q)).toList();
@@ -273,7 +286,12 @@ class TaskRepository {
     }
   }
 
-  Future<bool> updateTaskStatus(int id, String status, {int? employeeId, String? notes}) async {
+  Future<bool> updateTaskStatus(
+    int id,
+    String status, {
+    int? employeeId,
+    String? notes,
+  }) async {
     try {
       var connection = await DatabaseConnection.getConnection();
       try {
@@ -285,15 +303,15 @@ class TaskRepository {
                 completed_at = CASE WHEN :check_status = 'completed' THEN NOW() ELSE NULL END
             WHERE id = :id
             ''',
-            {
-              'status': status,
-              'check_status': status,
-              'id': id,
-            },
+            {'status': status, 'check_status': status, 'id': id},
           );
 
           if (employeeId != null) {
-            int pct = (status == 'completed') ? 100 : (status == 'review' ? 90 : (status == 'in_progress' ? 50 : 0));
+            int pct = (status == 'completed')
+                ? 100
+                : (status == 'review'
+                      ? 90
+                      : (status == 'in_progress' ? 50 : 0));
             await conn.execute(
               '''
               INSERT INTO task_progress (task_id, employee_id, status, progress_percentage, notes)
@@ -334,7 +352,9 @@ class TaskRepository {
           actualHours: t.actualHours,
           startDate: t.startDate,
           deadline: t.deadline,
-          completedAt: status == 'completed' ? DateTime.now().toIso8601String() : null,
+          completedAt: status == 'completed'
+              ? DateTime.now().toIso8601String()
+              : null,
         );
       }
       return true;
@@ -345,7 +365,9 @@ class TaskRepository {
     try {
       var connection = await DatabaseConnection.getConnection();
       try {
-        await connection.execute('DELETE FROM tasks WHERE id = :id', {'id': id});
+        await connection.execute('DELETE FROM tasks WHERE id = :id', {
+          'id': id,
+        });
         return true;
       } finally {
         await connection.close();
@@ -379,13 +401,21 @@ class TaskRepository {
           var data = results.rows.first.assoc();
           return {
             'total_active': int.tryParse(data['total_active'] ?? '') ?? 0,
-            'not_started_count': int.tryParse(data['not_started_count'] ?? '') ?? 0,
-            'in_progress_count': int.tryParse(data['in_progress_count'] ?? '') ?? 0,
+            'not_started_count':
+                int.tryParse(data['not_started_count'] ?? '') ?? 0,
+            'in_progress_count':
+                int.tryParse(data['in_progress_count'] ?? '') ?? 0,
             'review_count': int.tryParse(data['review_count'] ?? '') ?? 0,
             'completed_count': int.tryParse(data['completed_count'] ?? '') ?? 0,
           };
         }
-        return {'total_active': 0, 'not_started_count': 0, 'in_progress_count': 0, 'review_count': 0, 'completed_count': 0};
+        return {
+          'total_active': 0,
+          'not_started_count': 0,
+          'in_progress_count': 0,
+          'review_count': 0,
+          'completed_count': 0,
+        };
       } finally {
         await connection.close();
       }
@@ -394,8 +424,12 @@ class TaskRepository {
       final myTasks = _fallbackTasks.where((t) => t.assignedTo == employeeId);
       return {
         'total_active': myTasks.where((t) => t.status != 'completed').length,
-        'not_started_count': myTasks.where((t) => t.status == 'not_started').length,
-        'in_progress_count': myTasks.where((t) => t.status == 'in_progress').length,
+        'not_started_count': myTasks
+            .where((t) => t.status == 'not_started')
+            .length,
+        'in_progress_count': myTasks
+            .where((t) => t.status == 'in_progress')
+            .length,
         'review_count': myTasks.where((t) => t.status == 'review').length,
         'completed_count': myTasks.where((t) => t.status == 'completed').length,
       };

@@ -1,11 +1,12 @@
 import 'package:bcrypt/bcrypt.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:kita_kerja/database/index.dart';
+import 'package:kita_kerja/controllers/auth_controller.dart';
 import 'package:kita_kerja/layouts/auth_layout.dart';
 import 'package:kita_kerja/lib/utils.dart';
 import 'package:kita_kerja/widgets/brand_header.dart';
 import 'package:kita_kerja/widgets/neo_components.dart';
+import 'package:provider/provider.dart';
 import 'package:toastification/toastification.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -26,7 +27,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final MySQLHelper _dbHelper = MySQLHelper();
   bool _isLoading = false;
 
   @override
@@ -60,7 +60,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           _passwordController.text,
         );
 
-        final success = await _dbHelper.registerOwner(
+        final success = await context.read<AuthController>().registerOwner(
           namaUsaha: _namaUsahaController.text.trim(),
           namaLengkap: _namaLengkapController.text.trim(),
           email: _emailController.text.trim(),

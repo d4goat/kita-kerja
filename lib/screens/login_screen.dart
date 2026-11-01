@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kita_kerja/controllers/auth_controller.dart';
 import 'package:kita_kerja/core/utils/utils.dart';
-import 'package:kita_kerja/database/db_exception.dart';
+import 'package:kita_kerja/core/database/db_exception.dart';
 import 'package:kita_kerja/layouts/auth_layout.dart';
 import 'package:kita_kerja/widgets/brand_header.dart';
 import 'package:kita_kerja/widgets/neo_components.dart';

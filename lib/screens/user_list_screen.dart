@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:kita_kerja/database/index.dart';
+import 'package:kita_kerja/controllers/auth_controller.dart';
+import 'package:provider/provider.dart';
 import 'package:kita_kerja/lib/utils.dart';
 
 class UserListScreen extends StatefulWidget {
@@ -10,14 +11,14 @@ class UserListScreen extends StatefulWidget {
 }
 
 class _UserListScreenState extends State<UserListScreen> {
-  final MySQLHelper _dbHelper = MySQLHelper();
+
 
   late Future<List<Map<String, dynamic>>> _usersFuture;
 
   @override
   void initState() {
     super.initState();
-    _usersFuture = _dbHelper.getUsers();
+    _usersFuture = context.read<AuthController>().getUsers();
   }
 
   @override

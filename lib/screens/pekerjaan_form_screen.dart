@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:kita_kerja/database/index.dart';
+import 'package:kita_kerja/controllers/auth_controller.dart';
+import 'package:kita_kerja/controllers/task_controller.dart';
 import 'package:kita_kerja/layouts/main_layout.dart';
 import 'package:kita_kerja/lib/utils.dart';
+import 'package:kita_kerja/models/employee_model.dart';
+import 'package:kita_kerja/models/task_model.dart';
+import 'package:kita_kerja/repositories/employee_repository.dart';
+import 'package:kita_kerja/repositories/master_data_repository.dart';
 import 'package:kita_kerja/widgets/neo_components.dart';
+import 'package:provider/provider.dart';
 import 'package:toastification/toastification.dart';
 
 class PekerjaanFormScreen extends StatefulWidget {
@@ -16,7 +22,7 @@ class PekerjaanFormScreen extends StatefulWidget {
 
 class _PekerjaanFormScreenState extends State<PekerjaanFormScreen> {
   final _formKey = GlobalKey<FormState>();
-  final MySQLHelper _dbHelper = MySQLHelper();
+
 
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
@@ -89,14 +95,14 @@ class _PekerjaanFormScreenState extends State<PekerjaanFormScreen> {
   }
 
   Future<void> _loadDropdownData() async {
-    final categories = await _dbHelper.getJobCategories();
-    final employeesRes = await _dbHelper.getEmployees(
+    final masterRepo = MasterDataRepository();
+    final categories = (await masterRepo.getJobCategories()).map((e) => e.toMap()).toList();
+    final empRepo = EmployeeRepository();
+    final employeesRes = await empRepo.getEmployees(
       status: 'active',
       pageSize: 100,
     );
-    final employeesList = List<Map<String, dynamic>>.from(
-      employeesRes['data'] ?? [],
-    );
+    final employeesList = (employeesRes['data'] as List<EmployeeModel>).map((e) => e.toMap()).toList();
 
     if (!mounted) return;
     setState(() {
@@ -202,38 +208,30 @@ class _PekerjaanFormScreenState extends State<PekerjaanFormScreen> {
       setState(() => _isSaving = true);
 
       try {
+        final taskCtrl = context.read<TaskController>();
+        final currentUser = context.read<AuthController>().currentUser;
+
+        final task = TaskModel(
+          id: isEdit ? (widget.taskToEdit!['id'] as int) : 0,
+          categoryId: _selectedCategoryId!,
+          createdBy: currentUser?.id ?? 1,
+          assignedTo: _selectedAssignedTo!,
+          title: _titleController.text.trim(),
+          description: _descriptionController.text.trim(),
+          priority: _priority,
+          status: _status,
+          estimatedHours: estimated,
+          actualHours: actual,
+          startDate: _startDateController.text.trim().isNotEmpty
+              ? _startDateController.text.trim()
+              : null,
+          deadline: _deadlineController.text.trim(),
+        );
+
         if (isEdit) {
-          await _dbHelper.updateTask(
-            id: widget.taskToEdit!['id'] as int,
-            categoryId: _selectedCategoryId!,
-            assignedTo: _selectedAssignedTo!,
-            title: _titleController.text.trim(),
-            description: _descriptionController.text.trim(),
-            priority: _priority,
-            status: _status,
-            estimatedHours: estimated,
-            actualHours: actual,
-            startDate: _startDateController.text.trim().isNotEmpty
-                ? _startDateController.text.trim()
-                : null,
-            deadline: _deadlineController.text.trim(),
-          );
+          await taskCtrl.updateTask(task, currentUser);
         } else {
-          await _dbHelper.addTask(
-            categoryId: _selectedCategoryId!,
-            createdBy: 1, // Admin / user saat ini
-            assignedTo: _selectedAssignedTo!,
-            title: _titleController.text.trim(),
-            description: _descriptionController.text.trim(),
-            priority: _priority,
-            status: _status,
-            estimatedHours: estimated,
-            actualHours: actual,
-            startDate: _startDateController.text.trim().isNotEmpty
-                ? _startDateController.text.trim()
-                : null,
-            deadline: _deadlineController.text.trim(),
-          );
+          await taskCtrl.addTask(task, currentUser);
         }
 
         if (!mounted) return;
