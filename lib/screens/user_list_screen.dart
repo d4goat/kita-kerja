@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:kita_kerja/controllers/auth_controller.dart';
+import 'package:kita_kerja/core/utils/utils.dart';
+import 'package:kita_kerja/widgets/neo_components.dart';
 import 'package:provider/provider.dart';
-import 'package:kita_kerja/lib/utils.dart';
 
 class UserListScreen extends StatefulWidget {
   const UserListScreen({super.key});
@@ -11,8 +13,6 @@ class UserListScreen extends StatefulWidget {
 }
 
 class _UserListScreenState extends State<UserListScreen> {
-
-
   late Future<List<Map<String, dynamic>>> _usersFuture;
 
   @override
@@ -24,18 +24,21 @@ class _UserListScreenState extends State<UserListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Utils.background,
+      backgroundColor: Utils.neoCream,
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Daftar Pengguna',
-          style: TextStyle(color: Utils.border, fontWeight: FontWeight.w700),
+          style: GoogleFonts.spaceGrotesk(
+            color: Utils.neoBlack,
+            fontWeight: FontWeight.w700,
+          ),
         ),
-        backgroundColor: Colors.white,
+        backgroundColor: Utils.neoCream,
         elevation: 0,
-        shape: const Border(bottom: BorderSide(color: Utils.border, width: 2)),
+        shape: const Border(bottom: Utils.borderSideW),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout, color: Utils.border),
+            icon: const Icon(Icons.logout, color: Utils.neoBlack),
             onPressed: () {
               Navigator.pushReplacementNamed(context, '/login');
             },
@@ -47,7 +50,7 @@ class _UserListScreenState extends State<UserListScreen> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(color: Utils.primary),
+              child: CircularProgressIndicator(color: Utils.neoBlack),
             );
           }
 
@@ -61,24 +64,18 @@ class _UserListScreenState extends State<UserListScreen> {
             return Center(
               child: Container(
                 padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Utils.border, width: 2),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Utils.border,
-                      offset: Offset(4, 4),
-                      blurRadius: 0,
-                    ),
-                  ],
+                decoration: const BoxDecoration(
+                  color: Utils.neoCream,
+                  borderRadius: BorderRadius.zero,
+                  border: Utils.borderW,
+                  boxShadow: Utils.shadowMd,
                 ),
-                child: const Text(
+                child: Text(
                   'Data pengguna kosong',
-                  style: TextStyle(
+                  style: GoogleFonts.spaceGrotesk(
                     fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Utils.border,
+                    fontWeight: FontWeight.w700,
+                    color: Utils.neoBlack,
                   ),
                 ),
               ),
@@ -86,7 +83,7 @@ class _UserListScreenState extends State<UserListScreen> {
           }
 
           return ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             itemCount: users.length,
             itemBuilder: (context, index) {
               final user = users[index];
@@ -94,54 +91,38 @@ class _UserListScreenState extends State<UserListScreen> {
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Utils.border, width: 2),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Utils.border,
-                      offset: Offset(3, 3),
-                      blurRadius: 0,
-                    ),
-                  ],
+                decoration: const BoxDecoration(
+                  color: Utils.neoCream,
+                  borderRadius: BorderRadius.zero,
+                  border: Utils.borderW,
+                  boxShadow: Utils.shadowSm,
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: Utils.primary,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Utils.border, width: 2),
-                      ),
-                      child: const Icon(
-                        Icons.person,
-                        color: Colors.white,
-                        size: 22,
-                      ),
-                    ),
+                    NeoAvatar(name: user['name'] ?? '', size: 40),
                     const SizedBox(width: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          user['name'] ?? '',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: Utils.border,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            user['name'] ?? '',
+                            style: GoogleFonts.inter(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: Utils.neoBlack,
+                            ),
                           ),
-                        ),
-                        Text(
-                          user['email'] ?? '',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Color(0xFF666666),
+                          const SizedBox(height: 2),
+                          Text(
+                            user['email'] ?? '',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: Utils.neoBlack,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:kita_kerja/lib/utils.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:kita_kerja/core/utils/utils.dart';
 
 class BrandHeader extends StatelessWidget {
   const BrandHeader({super.key});
@@ -9,43 +10,44 @@ class BrandHeader extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            color: Utils.primary,
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: Utils.border, width: 2),
+          width: 36,
+          height: 36,
+          decoration: const BoxDecoration(
+            color: Utils.neoBlack,
+            borderRadius: BorderRadius.zero,
+            border: Utils.borderW,
+            boxShadow: Utils.shadowSm,
           ),
           alignment: Alignment.center,
-          child: const Text(
+          child: Text(
             'K',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
+            style: GoogleFonts.spaceGrotesk(
+              color: Utils.neoCream,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ),
         const SizedBox(width: 12),
-        const Column(
+        Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               'KerjaKita',
-              style: TextStyle(
-                fontSize: 16,
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: Utils.border,
+                color: Utils.neoBlack,
                 height: 1.2,
               ),
             ),
             Text(
               'Manajemen Tenaga Kerja UMKM',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w400,
-                color: Color(0xFF666666),
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Utils.neoBlack,
                 height: 1.3,
               ),
             ),

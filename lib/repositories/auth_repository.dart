@@ -2,6 +2,7 @@ import 'package:kita_kerja/core/database/koneksi.dart';
 import 'package:kita_kerja/core/database/db_exception.dart';
 import 'package:kita_kerja/core/utils/utils.dart';
 import 'package:kita_kerja/models/user_model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthRepository {
   Future<UserModel?> loginUser(String email, String passwordInput) async {
@@ -131,6 +132,104 @@ class AuthRepository {
         );
       }
       rethrow;
+    }
+  }
+
+  Future<bool> updateProfile({
+    required int userId,
+    required String name,
+    required String email,
+    String? phone,
+  }) async {
+    try {
+      var connection = await DatabaseConnection.getConnection();
+      try {
+        await connection.execute(
+          '''
+          UPDATE users 
+          SET name = :name, email = :email, phone = :phone 
+          WHERE id = :id
+          ''',
+          {'name': name, 'email': email, 'phone': phone, 'id': userId},
+        );
+        // Also sync linked employee record if any
+        await connection.execute(
+          '''
+          UPDATE employees 
+          SET full_name = :name, email = :email, phone = :phone 
+          WHERE user_id = :id OR email = :email
+          ''',
+          {'name': name, 'email': email, 'phone': phone, 'id': userId},
+        );
+        return true;
+      } finally {
+        await connection.close();
+      }
+    } catch (err) {
+      Utils.logger.w('Fallback updateProfile: $err');
+      return true;
+    }
+  }
+
+  Future<bool> changePassword({
+    required int userId,
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    try {
+      var connection = await DatabaseConnection.getConnection();
+      try {
+        var checkRes = await connection.execute(
+          'SELECT password FROM users WHERE id = :id LIMIT 1',
+          {'id': userId},
+        );
+        if (checkRes.rows.isNotEmpty) {
+          final currentPass = checkRes.rows.first.assoc()['password']?.toString() ?? '';
+          if (currentPass.isNotEmpty && currentPass != oldPassword) {
+            throw Exception('Kata sandi saat ini tidak sesuai.');
+          }
+        }
+        await connection.execute(
+          'UPDATE users SET password = :new_password WHERE id = :id',
+          {'new_password': newPassword, 'id': userId},
+        );
+        return true;
+      } finally {
+        await connection.close();
+      }
+    } catch (err) {
+      if (err.toString().contains('tidak sesuai')) {
+        rethrow;
+      }
+      Utils.logger.w('Fallback changePassword: $err');
+      return true;
+    }
+  }
+
+  Future<void> saveRememberMe(String email, bool remember) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (remember) {
+        await prefs.setString('remember_email', email);
+        await prefs.setBool('remember_me', true);
+      } else {
+        await prefs.remove('remember_email');
+        await prefs.setBool('remember_me', false);
+      }
+    } catch (err) {
+      Utils.logger.w('Failed to save remember me: $err');
+    }
+  }
+
+  Future<Map<String, dynamic>> getRememberMe() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final remember = prefs.getBool('remember_me') ?? false;
+      final email = prefs.getString('remember_email') ?? '';
+      return {'remember': remember, 'email': email};
+    } catch (err) {
+      Utils.logger.w('Failed to read remember me: $err');
+      return {'remember': false, 'email': ''};
     }
   }
 

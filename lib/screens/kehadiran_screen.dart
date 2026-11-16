@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:kita_kerja/controllers/attendance_controller.dart';
+import 'package:kita_kerja/models/attendance_model.dart';
 import 'package:kita_kerja/controllers/auth_controller.dart';
 import 'package:kita_kerja/core/utils/utils.dart';
 import 'package:kita_kerja/layouts/main_layout.dart';
@@ -44,41 +46,11 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
     super.dispose();
   }
 
-  Color _getStatusBg(String status) {
-    switch (status) {
-      case 'present':
-        return const Color(0xFFE2F9E5);
-      case 'late':
-        return const Color(0xFFFFF7DB);
-      case 'sick':
-      case 'leave':
-        return const Color(0xFFE5F0FF);
-      case 'absent':
-      default:
-        return const Color(0xFFFFF0F0);
-    }
-  }
-
-  Color _getStatusText(String status) {
-    switch (status) {
-      case 'present':
-        return const Color(0xFF1B7F2D);
-      case 'late':
-        return const Color(0xFF8C6600);
-      case 'sick':
-      case 'leave':
-        return Utils.primary;
-      case 'absent':
-      default:
-        return Utils.danger;
-    }
-  }
-
   String _formatCurrentTime() {
     final h = _currentTime.hour.toString().padLeft(2, '0');
     final m = _currentTime.minute.toString().padLeft(2, '0');
     final s = _currentTime.second.toString().padLeft(2, '0');
-    return '$h:$m:$s WIB';
+    return '$h:$m:$s';
   }
 
   String _formatTodayDate() {
@@ -89,277 +61,399 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
     return '$dayName, ${_currentTime.day} $monthName ${_currentTime.year}';
   }
 
+  // Section 7.4 Widget Absen (Asimetris 7/5)
   Widget _buildClockInOutCard(AttendanceController controller, AuthController auth) {
     final user = auth.currentUser;
     final today = controller.todayAttendance;
     final hasIn = controller.hasClockedInToday;
     final hasOut = controller.hasClockedOutToday;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Utils.border, width: 2),
-        boxShadow: const [
-          BoxShadow(
-            color: Utils.border,
-            offset: Offset(4, 4),
-            blurRadius: 0,
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return NeoContainer(
+      padding: const EdgeInsets.all(28),
+      boxShadow: Utils.shadowLg,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+          // Kiri 7/12: Jam live KPI, tanggal, jadwal kerja
+          Expanded(
+            flex: 7,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const NeoTag(label: 'PRESENSI HARI INI'),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Shift Pagi 08:00 – 17:00 WIB',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Utils.neoBlack,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  _formatCurrentTime(),
+                  style: GoogleFonts.spaceGrotesk(
+                    fontSize: 48,
+                    fontWeight: FontWeight.w700,
+                    color: Utils.neoBlack,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _formatTodayDate(),
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Utils.neoBlack,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (hasIn && !hasOut)
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: Utils.secondary,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: Utils.border, width: 1.5),
+                      NeoBadge.attendance(today?.status ?? 'present'),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Masuk: ${today?.clockIn} WIB',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Utils.neoBlack,
                         ),
-                        child: const Icon(Icons.access_time_filled, size: 18, color: Utils.border),
+                      ),
+                    ],
+                  )
+                else if (hasOut)
+                  Row(
+                    children: [
+                      const NeoBadge(
+                        label: 'SELESAI HARI INI',
+                        icon: Icons.check,
+                        backgroundColor: Utils.neoGreen,
+                        foregroundColor: Utils.neoBlack,
                       ),
                       const SizedBox(width: 10),
                       Text(
-                        'Presensi Mandiri: ${user?.name ?? 'Karyawan'} (${user?.employeeCode ?? 'EMP003'})',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: Utils.border,
+                        'Total Jam Kerja: ${today?.workingHoursFormatted ?? '8j'}',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Utils.neoBlack,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${_formatTodayDate()} • Jadwal: 08:00 - 17:00 WIB',
-                    style: const TextStyle(fontSize: 13, color: Color(0xFF666666), fontWeight: FontWeight.w500),
-                  ),
-                ],
-              ),
-              // Live Digital Clock
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF5F1E8),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Utils.border, width: 2),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.timer_outlined, size: 18, color: Utils.primary),
-                    const SizedBox(width: 8),
-                    Text(
-                      _formatCurrentTime(),
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        color: Utils.border,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-          const SizedBox(height: 20),
-          const Divider(color: Color(0xFFE5E5E5), thickness: 1.5),
-          const SizedBox(height: 16),
+          const SizedBox(width: 24),
 
-          // Status & Buttons Action
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Status Today Card
-              Expanded(
-                flex: 3,
-                child: Row(
-                  children: [
-                    // Clock In Info
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: hasIn ? const Color(0xFFE2F9E5) : const Color(0xFFF9F9F9),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: hasIn ? const Color(0xFF1B7F2D) : const Color(0xFFCCCCCC),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'JAM MASUK',
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF666666)),
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                Icon(
-                                  hasIn ? Icons.check_circle : Icons.radio_button_unchecked,
-                                  size: 18,
-                                  color: hasIn ? const Color(0xFF1B7F2D) : Colors.grey,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  hasIn ? '${today?.clockIn} WIB' : 'Belum Masuk',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w800,
-                                    color: hasIn ? const Color(0xFF1B7F2D) : Colors.grey,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    // Clock Out Info
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: hasOut ? const Color(0xFFE2F9E5) : const Color(0xFFF9F9F9),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: hasOut ? const Color(0xFF1B7F2D) : const Color(0xFFCCCCCC),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'JAM PULANG',
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF666666)),
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                Icon(
-                                  hasOut ? Icons.check_circle : Icons.radio_button_unchecked,
-                                  size: 18,
-                                  color: hasOut ? const Color(0xFF1B7F2D) : Colors.grey,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  hasOut ? '${today?.clockOut} WIB' : (hasIn ? 'Sedang Bekerja' : '-'),
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w800,
-                                    color: hasOut ? const Color(0xFF1B7F2D) : (hasIn ? Utils.primary : Colors.grey),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 20),
-
-              // Action Buttons
-              Expanded(
-                flex: 2,
-                child: Column(
-                  children: [
-                    if (!hasIn) ...[
-                      SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: NeoButton(
-                          text: 'MASUK KERJA (CLOCK IN)',
-                          backgroundColor: Utils.primary,
-                          isLoading: controller.isLoading,
-                          onPressed: () async {
-                            if (user == null) return;
-                            final ok = await controller.clockIn(user);
-                            if (ok && mounted) {
-                              Utils.toast(
-                                context,
-                                'Berhasil Masuk Kerja! Semangat beraktivitas.',
-                                ToastificationType.success,
-                                Icons.check_circle,
-                                Utils.success,
-                              );
-                            }
-                          },
-                        ),
-                      ),
-                    ] else if (!hasOut) ...[
-                      SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: NeoButton(
-                          text: 'PULANG KERJA (CLOCK OUT)',
-                          backgroundColor: Utils.danger,
-                          isLoading: controller.isLoading,
-                          onPressed: () async {
-                            if (user == null) return;
-                            final ok = await controller.clockOut(user);
-                            if (ok && mounted) {
-                              Utils.toast(
-                                context,
-                                'Berhasil Pulang Kerja! Jam kerja Anda telah tercatat.',
-                                ToastificationType.success,
-                                Icons.check_circle,
-                                Utils.success,
-                              );
-                            }
-                          },
-                        ),
-                      ),
-                    ] else ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE2F9E5),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFF1B7F2D), width: 2),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.verified, color: Color(0xFF1B7F2D), size: 20),
-                            SizedBox(width: 8),
-                            Text(
-                              'Presensi Hari Ini Lengkap',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFF1B7F2D),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
+          // Kanan 5/12: Tombol XL Sesuai State Absen (88px)
+          Expanded(
+            flex: 5,
+            child: !hasIn
+                ? NeoButton(
+                    text: 'MASUK KERJA',
+                    size: NeoButtonSize.xl,
+                    variant: NeoButtonVariant.success,
+                    icon: const Icon(Icons.login, size: 28),
+                    isLoading: controller.isLoading,
+                    isFullWidth: true,
+                    onPressed: () async {
+                      if (user == null) return;
+                      final ok = await controller.clockIn(user);
+                      if (ok && mounted) {
+                        Utils.toast(
+                          context,
+                          'Masuk kerja tercatat pukul ${_formatCurrentTime()}',
+                          ToastificationType.success,
+                          Icons.check,
+                          Utils.neoGreen,
+                        );
+                      }
+                    },
+                  )
+                : (!hasOut
+                    ? NeoButton(
+                        text: 'PULANG KERJA',
+                        size: NeoButtonSize.xl,
+                        variant: NeoButtonVariant.secondary,
+                        icon: const Icon(Icons.logout, size: 28),
+                        isLoading: controller.isLoading,
+                        isFullWidth: true,
+                        onPressed: () async {
+                          if (user == null) return;
+                          final ok = await controller.clockOut(user);
+                          if (ok && mounted) {
+                            Utils.toast(
+                              context,
+                              'Pulang kerja tercatat pukul ${_formatCurrentTime()}',
+                              ToastificationType.success,
+                              Icons.check,
+                              Utils.neoGreen,
+                            );
+                          }
+                        },
+                      )
+                    : NeoButton(
+                        text: 'SELESAI HARI INI',
+                        size: NeoButtonSize.xl,
+                        variant: NeoButtonVariant.neutral,
+                        isFullWidth: true,
+                        onPressed: null, // Disabled
+                      )),
           ),
         ],
       ),
+    );
+  }
+
+  void _showCorrectionDialog(
+    AttendanceModel att,
+    AuthController auth,
+    AttendanceController controller,
+  ) {
+    final dateController = TextEditingController(text: att.attendanceDate);
+    final inController = TextEditingController(text: att.clockIn == '-' ? '08:00' : att.clockIn);
+    final outController = TextEditingController(text: att.clockOut == '-' ? '17:00' : att.clockOut);
+    final notesController = TextEditingController(text: att.notes == '-' ? '' : att.notes);
+    String status = att.status;
+
+    NeoDialog.show(
+      context: context,
+      title: 'Koreksi Kehadiran',
+      maxWidth: 520,
+      content: StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              NeoAlert.info(text: 'Koreksi tercatat otomatis di Log Aktivitas sistem.'),
+              const SizedBox(height: 16),
+              NeoTextField(
+                label: 'Tanggal (YYYY-MM-DD)',
+                placeholder: '2026-11-16',
+                controller: dateController,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: NeoTextField(
+                      label: 'Jam Masuk (HH:mm)',
+                      placeholder: '08:00',
+                      controller: inController,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: NeoTextField(
+                      label: 'Jam Keluar (HH:mm)',
+                      placeholder: '17:00',
+                      controller: outController,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'STATUS KEHADIRAN',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Utils.neoBlack,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                height: 44,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: const BoxDecoration(
+                  color: Utils.neoCream,
+                  borderRadius: BorderRadius.zero,
+                  border: Utils.borderW,
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: status,
+                    isExpanded: true,
+                    dropdownColor: Utils.neoCream,
+                    items: const [
+                      DropdownMenuItem(value: 'present', child: Text('Hadir (present)')),
+                      DropdownMenuItem(value: 'late', child: Text('Terlambat (late)')),
+                      DropdownMenuItem(value: 'sick', child: Text('Sakit (sick)')),
+                      DropdownMenuItem(value: 'leave', child: Text('Izin / Cuti (leave)')),
+                      DropdownMenuItem(value: 'absent', child: Text('Tidak Hadir (absent)')),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        setDialogState(() => status = val);
+                      }
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              NeoTextField(
+                label: 'Catatan Koreksi',
+                placeholder: 'Alasan koreksi data presensi',
+                controller: notesController,
+              ),
+            ],
+          );
+        },
+      ),
+      actions: [
+        NeoButton(
+          text: 'Batal',
+          variant: NeoButtonVariant.neutral,
+          size: NeoButtonSize.sm,
+          onPressed: () => Navigator.pop(context),
+        ),
+        const SizedBox(width: 12),
+        NeoButton(
+          text: 'Simpan Koreksi',
+          variant: NeoButtonVariant.primary,
+          size: NeoButtonSize.sm,
+          onPressed: () async {
+            Navigator.pop(context);
+            final ok = await controller.correctAttendance(
+              id: att.id,
+              attendanceDate: dateController.text.trim(),
+              clockIn: inController.text.trim(),
+              clockOut: outController.text.trim(),
+              status: status,
+              notes: notesController.text.trim(),
+              currentUser: auth.currentUser,
+            );
+            if (!mounted) return;
+            if (ok) {
+              Utils.toast(context, 'Data presensi berhasil dikoreksi!', ToastificationType.success, Icons.check, Utils.neoGreen);
+            } else {
+              Utils.toast(context, 'Gagal mengoreksi presensi', ToastificationType.error, Icons.close, Utils.neoRed);
+            }
+          },
+        ),
+      ],
+    );
+  }
+
+  void _showAbsenceRequestDialog(
+    AuthController auth,
+    AttendanceController controller,
+  ) {
+    final now = DateTime.now();
+    final todayStr = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final dateController = TextEditingController(text: todayStr);
+    final notesController = TextEditingController();
+    String status = 'sick';
+    int employeeId = auth.currentUser?.employeeId ?? 3;
+
+    NeoDialog.show(
+      context: context,
+      title: 'Pengajuan Izin / Sakit',
+      maxWidth: 480,
+      content: StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              NeoTextField(
+                label: 'Tanggal',
+                placeholder: todayStr,
+                controller: dateController,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'JENIS PENGAJUAN',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Utils.neoBlack,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                height: 44,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: const BoxDecoration(
+                  color: Utils.neoCream,
+                  borderRadius: BorderRadius.zero,
+                  border: Utils.borderW,
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: status,
+                    isExpanded: true,
+                    dropdownColor: Utils.neoCream,
+                    items: const [
+                      DropdownMenuItem(value: 'sick', child: Text('Sakit (Surat Dokter)')),
+                      DropdownMenuItem(value: 'leave', child: Text('Izin / Cuti Terencana')),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        setDialogState(() => status = val);
+                      }
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              NeoTextField(
+                label: 'Keterangan / Alasan*',
+                placeholder: 'Misal: Istirahat dokter karena demam',
+                controller: notesController,
+                maxLines: 3,
+              ),
+            ],
+          );
+        },
+      ),
+      actions: [
+        NeoButton(
+          text: 'Batal',
+          variant: NeoButtonVariant.neutral,
+          size: NeoButtonSize.sm,
+          onPressed: () => Navigator.pop(context),
+        ),
+        const SizedBox(width: 12),
+        NeoButton(
+          text: 'Kirim Pengajuan',
+          variant: NeoButtonVariant.primary,
+          size: NeoButtonSize.sm,
+          onPressed: () async {
+            if (notesController.text.trim().isEmpty) {
+              Utils.toast(context, 'Alasan keterangan wajib diisi', ToastificationType.warning, Icons.warning, Utils.neoYellow);
+              return;
+            }
+            Navigator.pop(context);
+
+            final ok = await controller.submitAbsenceRequest(
+              employeeId: employeeId,
+              attendanceDate: dateController.text.trim(),
+              status: status,
+              notes: notesController.text.trim(),
+              currentUser: auth.currentUser,
+            );
+            if (!mounted) return;
+            if (ok) {
+              Utils.toast(context, 'Pengajuan ${status == 'sick' ? 'Sakit' : 'Izin'} berhasil dicatat!', ToastificationType.success, Icons.check, Utils.neoGreen);
+            } else {
+              Utils.toast(context, 'Gagal mencatat pengajuan', ToastificationType.error, Icons.close, Utils.neoRed);
+            }
+          },
+        ),
+      ],
     );
   }
 
@@ -377,48 +471,49 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
           title: isEmployee ? 'Presensi Saya' : 'Presensi & Kehadiran',
           activeMenu: 'kehadiran',
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(32),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 1. Clock In / Out Card (Khusus role Karyawan atau jika user memiliki employeeId)
+                // 1. Clock In / Out Card
                 if (isEmployee || (user?.employeeId != null && user!.employeeId! > 0)) ...[
                   _buildClockInOutCard(controller, auth),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
                 ],
 
-                // 2. Filter Bar
+                // 2. Toolbar & Filters
                 Row(
                   children: [
                     // Search Input
                     Expanded(
                       child: Container(
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Utils.border, width: 2),
+                        height: 44,
+                        decoration: const BoxDecoration(
+                          color: Utils.neoCream,
+                          borderRadius: BorderRadius.zero,
+                          border: Utils.borderW,
+                          boxShadow: Utils.shadowSm,
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
                         child: Row(
                           children: [
-                            const Icon(Icons.search, color: Utils.border, size: 20),
-                            const SizedBox(width: 8),
+                            const Icon(Icons.search, color: Utils.neoBlack, size: 20),
+                            const SizedBox(width: 10),
                             Expanded(
                               child: TextField(
                                 onChanged: (val) => controller.setSearchQuery(val),
                                 decoration: InputDecoration(
                                   hintText: isEmployee
                                       ? 'Cari tanggal atau catatan presensi...'
-                                      : 'Cari nama atau NIK karyawan...',
+                                      : 'Cari nama atau kode karyawan...',
                                   border: InputBorder.none,
                                   enabledBorder: InputBorder.none,
                                   focusedBorder: InputBorder.none,
                                   isDense: true,
                                 ),
-                                style: const TextStyle(
+                                style: GoogleFonts.inter(
                                   fontSize: 14,
-                                  color: Utils.border,
+                                  color: Utils.neoBlack,
                                 ),
                               ),
                             ),
@@ -429,24 +524,23 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
                     const SizedBox(width: 16),
                     // Status Filter
                     Container(
-                      height: 42,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Utils.border, width: 2),
+                      height: 44,
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      decoration: const BoxDecoration(
+                        color: Utils.neoCream,
+                        borderRadius: BorderRadius.zero,
+                        border: Utils.borderW,
+                        boxShadow: Utils.shadowSm,
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           value: controller.selectedStatus,
-                          icon: const Icon(
-                            Icons.arrow_drop_down,
-                            color: Utils.border,
-                          ),
-                          style: const TextStyle(
+                          dropdownColor: Utils.neoCream,
+                          icon: const Icon(Icons.arrow_drop_down, color: Utils.neoBlack),
+                          style: GoogleFonts.inter(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: Utils.border,
+                            color: Utils.neoBlack,
                           ),
                           items: const [
                             DropdownMenuItem(value: 'all', child: Text('Semua Status')),
@@ -462,14 +556,20 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(width: 16),
+                    NeoButton(
+                      text: '+ Ajukan Izin / Sakit',
+                      variant: NeoButtonVariant.primary,
+                      onPressed: () => _showAbsenceRequestDialog(auth, controller),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
 
-                // 3. Attendances Table
+                // 3. Attendances Single-Frame Table
                 NeoTable(
                   isLoading: controller.isLoading,
-                  emptyIcon: Icons.event_busy,
+                  emptyIcon: Icons.calendar_today,
                   emptyText: 'Tidak ada riwayat kehadiran ditemukan',
                   columnWidths: isEmployee
                       ? const {
@@ -477,7 +577,7 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
                           1: FlexColumnWidth(1.1),
                           2: FlexColumnWidth(1.1),
                           3: FlexColumnWidth(1.2),
-                          4: FlexColumnWidth(1.2),
+                          4: FlexColumnWidth(1.5),
                           5: FlexColumnWidth(2.0),
                         }
                       : const {
@@ -485,9 +585,10 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
                           1: FlexColumnWidth(1.2),
                           2: FlexColumnWidth(1.0),
                           3: FlexColumnWidth(1.0),
-                          4: FlexColumnWidth(1.2),
-                          5: FlexColumnWidth(1.2),
+                          4: FlexColumnWidth(1.0),
+                          5: FlexColumnWidth(1.5),
                           6: FlexColumnWidth(1.8),
+                          7: FlexColumnWidth(0.9),
                         },
                   headers: isEmployee
                       ? const [
@@ -506,70 +607,59 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
                           NeoTableHeaderCell('JAM KERJA'),
                           NeoTableHeaderCell('STATUS'),
                           NeoTableHeaderCell('CATATAN'),
+                          NeoTableHeaderCell('AKSI', alignment: Alignment.center),
                         ],
                   rows: filtered.map((att) {
-                    final st = att.status;
-                    final rowCells = <NeoTableCell>[];
-
-                    if (!isEmployee) {
-                      rowCells.add(
+                    if (isEmployee) {
+                      return [
+                        NeoTableCell(text: att.attendanceDate),
+                        NeoTableCell(text: att.clockIn),
+                        NeoTableCell(text: att.clockOut),
+                        NeoTableCell(text: att.workingHoursFormatted),
+                        NeoTableCell(child: NeoBadge.attendance(att.status)),
+                        NeoTableCell(text: att.notes == '-' ? '' : att.notes),
+                      ];
+                    } else {
+                      return [
                         NeoTableCell(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
-                                att.employeeName,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w800,
-                                  color: Utils.border,
-                                ),
-                              ),
-                              Text(
-                                '${att.employeeCode} • ${att.departmentName}',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: Color(0xFF666666),
+                              NeoAvatar(name: att.employeeName, size: 28),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  att.employeeName,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: Utils.neoBlack,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      );
-                    }
-
-                    rowCells.addAll([
-                      NeoTableCell(text: att.attendanceDate),
-                      NeoTableCell(text: att.clockIn),
-                      NeoTableCell(text: att.clockOut),
-                      NeoTableCell(text: '${att.workingHoursFormatted} Jam'),
-                      NeoTableCell(
-                        child: Align(
+                        NeoTableCell(text: att.attendanceDate),
+                        NeoTableCell(text: att.clockIn),
+                        NeoTableCell(text: att.clockOut),
+                        NeoTableCell(text: att.workingHoursFormatted),
+                        NeoTableCell(child: NeoBadge.attendance(att.status)),
+                        NeoTableCell(text: att.notes == '-' ? '' : att.notes),
+                        NeoTableCell(
                           alignment: Alignment.center,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: _getStatusBg(st),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Utils.border, width: 1.5),
-                            ),
-                            child: Text(
-                              att.statusLabel,
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w800,
-                                color: _getStatusText(st),
-                              ),
-                            ),
-                          ),
+                          child: auth.isAdmin
+                              ? NeoIconButton(
+                                  icon: Icons.edit,
+                                  size: 32,
+                                  tooltip: 'Koreksi Kehadiran',
+                                  onPressed: () => _showCorrectionDialog(att, auth, controller),
+                                )
+                              : const Text('-'),
                         ),
-                      ),
-                      NeoTableCell(text: att.notes),
-                    ]);
-
-                    return rowCells;
+                      ];
+                    }
                   }).toList(),
                 ),
               ],

@@ -46,6 +46,12 @@ class TaskController extends ChangeNotifier {
           status: _selectedStatus,
         );
         _summaryMetrics = await _repository.getJobdeskSummaryMetrics(empId);
+      } else if (currentUser != null && currentUser.isManager) {
+        _tasks = await _repository.getTasks(
+          search: _searchQuery,
+          status: _selectedStatus,
+          supervisorId: empId,
+        );
       } else {
         _tasks = await _repository.getTasks(
           search: _searchQuery,

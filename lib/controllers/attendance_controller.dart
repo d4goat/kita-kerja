@@ -41,6 +41,12 @@ class AttendanceController extends ChangeNotifier {
       if (currentUser != null && currentUser.isEmployee) {
         _attendances = await _repository.getEmployeeAttendances(empId);
         _todayAttendance = await _repository.getTodayAttendance(empId);
+      } else if (currentUser != null && currentUser.isManager) {
+        _attendances = await _repository.getAttendances(
+          search: _searchQuery,
+          supervisorId: empId,
+        );
+        _todayAttendance = await _repository.getTodayAttendance(empId);
       } else {
         _attendances = await _repository.getAttendances(search: _searchQuery);
         _todayAttendance = await _repository.getTodayAttendance(empId);
@@ -98,5 +104,61 @@ class AttendanceController extends ChangeNotifier {
       final matchStatus = _selectedStatus == 'all' || item.status == _selectedStatus;
       return matchSearch && matchStatus;
     }).toList();
+  }
+
+  Future<bool> correctAttendance({
+    required int id,
+    required String attendanceDate,
+    required String clockIn,
+    required String clockOut,
+    required String status,
+    String? notes,
+    UserModel? currentUser,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final ok = await _repository.correctAttendance(
+        id: id,
+        attendanceDate: attendanceDate,
+        clockIn: clockIn,
+        clockOut: clockOut,
+        status: status,
+        notes: notes,
+      );
+      if (ok) {
+        await loadAttendances(currentUser);
+      }
+      return ok;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> submitAbsenceRequest({
+    required int employeeId,
+    required String attendanceDate,
+    required String status,
+    required String notes,
+    UserModel? currentUser,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final ok = await _repository.submitAbsenceRequest(
+        employeeId: employeeId,
+        attendanceDate: attendanceDate,
+        status: status,
+        notes: notes,
+      );
+      if (ok) {
+        await loadAttendances(currentUser);
+      }
+      return ok;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 }

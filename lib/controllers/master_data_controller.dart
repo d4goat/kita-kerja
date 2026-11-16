@@ -209,4 +209,58 @@ class MasterDataController extends ChangeNotifier {
     if (ok) await loadCurrentTab();
     return ok;
   }
+
+  List<Map<String, dynamic>> get currentItems => currentDataList;
+
+  Future<bool> addItem({required String name, required String description}) async {
+    switch (_selectedTabIndex) {
+      case 0:
+        return await addPosition(name, description);
+      case 1:
+        return await addDepartment(name, description);
+      case 2:
+        return await addJobCategory(name, description);
+      case 3:
+        return await addSalaryType(name, description);
+      default:
+        return false;
+    }
+  }
+
+  Future<bool> updateItem({
+    required int id,
+    required String name,
+    required String description,
+    required String status,
+  }) async {
+    switch (_selectedTabIndex) {
+      case 0:
+        return await updatePosition(id, name, description, status);
+      case 1:
+        return await updateDepartment(id, name, description, status);
+      case 2:
+        return await updateJobCategory(id, name, description, status);
+      case 3:
+        return await updateSalaryType(id, name, description, status);
+      default:
+        return false;
+    }
+  }
+
+  Future<bool> toggleStatus(int id, String currentStatus) async {
+    switch (_selectedTabIndex) {
+      case 0:
+        return await togglePositionStatus(id, currentStatus);
+      case 1:
+        return await toggleDepartmentStatus(id, currentStatus);
+      case 2:
+        return await toggleJobCategoryStatus(id, currentStatus);
+      case 3:
+        return await toggleSalaryTypeStatus(id, currentStatus);
+      case 4:
+        return await toggleWorkScheduleStatus(id, currentStatus);
+      default:
+        return false;
+    }
+  }
 }

@@ -15,6 +15,8 @@ class EmployeeModel {
   final String workScheduleName;
   final String joinDate;
   final String status;
+  final int? supervisorId;
+  final String? supervisorName;
 
   EmployeeModel({
     required this.id,
@@ -33,6 +35,8 @@ class EmployeeModel {
     required this.workScheduleName,
     required this.joinDate,
     this.status = 'active',
+    this.supervisorId,
+    this.supervisorName,
   });
 
   bool get isActive => status == 'active';
@@ -55,6 +59,8 @@ class EmployeeModel {
       workScheduleName: map['work_schedule_name']?.toString() ?? '-',
       joinDate: (map['join_date']?.toString() ?? '').split(' ')[0],
       status: map['status']?.toString() ?? 'active',
+      supervisorId: map['supervisor_id'] != null ? int.tryParse(map['supervisor_id'].toString()) : null,
+      supervisorName: map['supervisor_name']?.toString(),
     );
   }
 
@@ -76,6 +82,8 @@ class EmployeeModel {
       'work_schedule_name': workScheduleName,
       'join_date': joinDate,
       'status': status,
+      'supervisor_id': supervisorId,
+      'supervisor_name': supervisorName,
     };
   }
 }

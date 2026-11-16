@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:kita_kerja/controllers/auth_controller.dart';
 import 'package:kita_kerja/controllers/dashboard_controller.dart';
 import 'package:kita_kerja/core/utils/utils.dart';
@@ -40,287 +41,218 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return dateStr;
   }
 
-  Widget _buildStatusBadge(String status) {
-    String label = 'BELUM MULAI';
-    Color bg = Colors.white;
-    Color textCol = Utils.border;
-
-    switch (status.toLowerCase()) {
-      case 'in_progress':
-        label = 'SEDANG DIKERJAKAN';
-        bg = Utils.primary;
-        textCol = Colors.white;
-        break;
-      case 'review':
-        label = 'DITINJAU';
-        bg = Utils.secondary;
-        textCol = Utils.border;
-        break;
-      case 'completed':
-        label = 'SELESAI';
-        bg = Utils.success;
-        textCol = Colors.white;
-        break;
-      case 'not_started':
-      default:
-        label = 'BELUM MULAI';
-        bg = Colors.white;
-        textCol = Utils.border;
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Utils.border, width: 1.5),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w800,
-          color: textCol,
-        ),
-      ),
-    );
-  }
-
   Widget _buildKaryawanPersonalDashboard(DashboardSummaryModel data, AuthController auth) {
     final user = auth.currentUser;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Welcome Banner
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Utils.border, width: 2),
-            boxShadow: const [
-              BoxShadow(color: Utils.border, offset: Offset(4, 4), blurRadius: 0),
-            ],
-          ),
+        // Welcome Banner (Neo-Brutalism container)
+        NeoContainer(
+          padding: const EdgeInsets.all(24),
           child: Row(
             children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: Utils.primary,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Utils.border, width: 2),
-                ),
-                child: const Icon(Icons.person, color: Colors.white, size: 28),
-              ),
-              const SizedBox(width: 16),
+              NeoAvatar(name: user?.name ?? 'Karyawan', size: 52),
+              const SizedBox(width: 20),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       'Selamat Datang, ${user?.name ?? 'Karyawan'}!',
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Utils.border),
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: Utils.neoBlack,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'NIK: ${user?.employeeCode ?? 'EMP003'} • Departemen: ${user?.departmentName ?? 'Operasional'} • Role: Karyawan Pelaksana',
-                      style: const TextStyle(fontSize: 13, color: Color(0xFF666666), fontWeight: FontWeight.w600),
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: Utils.neoBlack,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
               ),
-              SizedBox(
-                height: 40,
-                child: NeoButton(
-                  text: 'Buka Presensi Hari Ini →',
-                  backgroundColor: Utils.secondary,
-                  textColor: Utils.border,
-                  onPressed: () => Navigator.pushReplacementNamed(context, '/kehadiran'),
-                ),
+              NeoButton(
+                text: 'BUKA PRESENSI',
+                variant: NeoButtonVariant.secondary,
+                onPressed: () => Navigator.pushReplacementNamed(context, '/kehadiran'),
               ),
             ],
           ),
         ),
         const SizedBox(height: 24),
 
-        // Personal KPI Cards
+        // Personal KPI Cards (Section 7.1)
         Row(
           children: [
-            // Presensi Hari Ini
-            _buildPersonalKPICard(
+            NeoKPICard(
               title: 'PRESENSI HARI INI',
               value: data.hasClockedInToday ? (data.todayClockInTime ?? 'Hadir') : 'Belum Masuk',
-              subtitle: data.hasClockedInToday
+              caption: data.hasClockedInToday
                   ? (data.todayClockOutTime != null && data.todayClockOutTime != '-' ? 'Sudah Pulang' : 'Sedang Masuk Kerja')
-                  : 'Klik menu Kehadiran untuk Clock-In',
+                  : 'Belum Clock-In hari ini',
               icon: Icons.access_time_filled,
-              color: data.hasClockedInToday ? Utils.success : Utils.danger,
+              iconContainerColor: data.hasClockedInToday ? Utils.neoGreen : Utils.neoRed,
+              iconColor: Utils.neoBlack,
             ),
             const SizedBox(width: 16),
-            // Tugas Aktif
-            _buildPersonalKPICard(
+            NeoKPICard(
               title: 'TUGAS AKTIF SAYA',
-              value: '${data.myActiveTasksCount} Tugas',
-              subtitle: '${data.myInProgressTasksCount} Sedang Berjalan • ${data.myReviewTasksCount} Ditinjau',
-              icon: Icons.assignment_turned_in,
-              color: Utils.primary,
+              value: '${data.myActiveTasksCount}',
+              caption: '${data.myInProgressTasksCount} Berjalan • ${data.myReviewTasksCount} Ditinjau',
+              icon: Icons.assignment,
+              iconContainerColor: Utils.neoBlue,
+              iconColor: Utils.neoCream,
             ),
             const SizedBox(width: 16),
-            // Beban Kerja
-            _buildPersonalKPICard(
+            NeoKPICard(
               title: 'BEBAN KERJA PRIBADI',
               value: '${data.myWorkloadPercentage.toStringAsFixed(1)}%',
-              subtitle: '${data.myAssignedHours.toStringAsFixed(0)} Jam / ${data.myCapacityHours.toStringAsFixed(0)} Jam Kapasitas',
+              caption: '${data.myAssignedHours.toStringAsFixed(0)}j / ${data.myCapacityHours.toStringAsFixed(0)}j Kapasitas',
               icon: Icons.speed,
-              color: data.myWorkloadPercentage > 100 ? Utils.danger : Utils.secondary,
+              iconContainerColor: data.myWorkloadPercentage > 100 ? Utils.neoRed : Utils.neoYellow,
+              iconColor: Utils.neoBlack,
             ),
             const SizedBox(width: 16),
-            // Tugas Selesai
-            _buildPersonalKPICard(
+            NeoKPICard(
               title: 'TUGAS SELESAI',
-              value: '${data.myCompletedTasksCount} Tugas',
-              subtitle: 'Periode bulan berjalan',
-              icon: Icons.check_circle,
-              color: Utils.success,
+              value: '${data.myCompletedTasksCount}',
+              caption: 'Periode bulan berjalan',
+              icon: Icons.check,
+              iconContainerColor: Utils.neoGreen,
+              iconColor: Utils.neoBlack,
             ),
           ],
         ),
         const SizedBox(height: 24),
 
-        // Upcoming Tasks for this employee
-        Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Utils.border, width: 2),
-            boxShadow: const [
-              BoxShadow(color: Utils.border, offset: Offset(4, 4), blurRadius: 0),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        // 8/4 Layout: Upcoming Tasks (8) + Personal Workload Meter (4)
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Left 8/12: Upcoming Tasks
+            Expanded(
+              flex: 8,
+              child: NeoContainer(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Tugas Mendekati Deadline Saya',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Utils.border),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'PEKERJAAN SAYA',
+                          style: GoogleFonts.spaceGrotesk(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Utils.neoBlack,
+                          ),
+                        ),
+                        MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                            onTap: () => Navigator.pushReplacementNamed(context, '/pekerjaan'),
+                            child: Text(
+                              'Lihat Semua →',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: Utils.neoBlack,
+                                decoration: TextDecoration.underline,
+                                decorationThickness: 2,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    TextButton(
-                      onPressed: () => Navigator.pushReplacementNamed(context, '/pekerjaan'),
-                      child: const Text('Lihat Semua Tugas →', style: TextStyle(fontWeight: FontWeight.w800, color: Utils.primary)),
+                    const SizedBox(height: 16),
+                    if (data.taskList.isEmpty) ...[
+                      const Padding(
+                        padding: EdgeInsets.all(32),
+                        child: Center(
+                          child: Text('Tidak ada tugas aktif yang mendekati deadline.'),
+                        ),
+                      ),
+                    ] else ...[
+                      ...data.taskList.map((task) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: const BoxDecoration(
+                            border: Border(bottom: Utils.borderSideWSm),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      task['title'].toString(),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                        color: Utils.neoBlack,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Kategori: ${task['category_name'] ?? 'Umum'} • Deadline: ${_formatDate(task['deadline'].toString())}',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        color: Utils.neoBlack,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              NeoBadge.taskStatus(task['status'].toString()),
+                            ],
+                          ),
+                        );
+                      }),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 24),
+
+            // Right 4/12: Personal Workload Meter
+            Expanded(
+              flex: 4,
+              child: NeoContainer(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'STATUS BEBAN KERJA',
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Utils.neoBlack,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    NeoWorkloadMeter(
+                      percentage: data.myWorkloadPercentage,
+                      label: user?.name ?? 'Saya',
+                      detailText: 'Ditugaskan ${data.myAssignedHours.toStringAsFixed(0)}j / Kapasitas ${data.myCapacityHours.toStringAsFixed(0)}j',
                     ),
                   ],
                 ),
               ),
-              const Divider(height: 1, thickness: 1.5, color: Color(0xFFE0E0E0)),
-              if (data.taskList.isEmpty) ...[
-                const Padding(
-                  padding: EdgeInsets.all(32),
-                  child: Center(
-                    child: Text('Tidak ada tugas aktif yang mendekati deadline.', style: TextStyle(color: Color(0xFF666666))),
-                  ),
-                ),
-              ] else ...[
-                ...data.taskList.map((task) {
-                  return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                    decoration: const BoxDecoration(
-                      border: Border(bottom: BorderSide(color: Color(0xFFEBEBEB), width: 1)),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                task['title'].toString(),
-                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Utils.border),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Kategori: ${task['category_name'] ?? 'Umum'} • Deadline: ${_formatDate(task['deadline'].toString())}',
-                                style: const TextStyle(fontSize: 12, color: Color(0xFF666666)),
-                              ),
-                            ],
-                          ),
-                        ),
-                        _buildStatusBadge(task['status'].toString()),
-                      ],
-                    ),
-                  );
-                }),
-              ],
-            ],
-          ),
+            ),
+          ],
         ),
       ],
-    );
-  }
-
-  Widget _buildPersonalKPICard({
-    required String title,
-    required String value,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Utils.border, width: 2),
-          boxShadow: const [
-            BoxShadow(color: Utils.border, offset: Offset(3, 3), blurRadius: 0),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF666666)),
-                ),
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Utils.border, width: 1.5),
-                  ),
-                  child: Icon(icon, color: color, size: 18),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              value,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Utils.border),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              subtitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11, color: Color(0xFF888888)),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -329,185 +261,164 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Alert Overload Banner
+        // 7.2 Banner Peringatan Beban Kerja (Kondisional Bahaya)
         if (overloaded != null) ...[
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-            decoration: BoxDecoration(
-              color: Utils.mainBackground,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Utils.border, width: 2),
-              boxShadow: const [
-                BoxShadow(color: Utils.border, offset: Offset(4, 4), blurRadius: 0),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: const BoxDecoration(color: Utils.danger, shape: BoxShape.circle),
-                  child: const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: RichText(
-                    text: TextSpan(
-                      style: const TextStyle(fontSize: 14, color: Utils.border),
-                      children: [
-                        const TextSpan(text: 'Beban kerja melebihi kapasitas: ', style: TextStyle(fontWeight: FontWeight.w600)),
-                        TextSpan(
-                          text: '${overloaded.employeeName} (${overloaded.percentageText})',
-                          style: const TextStyle(fontWeight: FontWeight.w800, color: Utils.danger),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () => Navigator.pushReplacementNamed(context, '/pekerjaan'),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Utils.border, width: 1.5),
-                    backgroundColor: Colors.white,
-                  ),
-                  icon: const Icon(Icons.arrow_forward, size: 14, color: Utils.border),
-                  label: const Text('Atur Ulang Tugas', style: TextStyle(fontWeight: FontWeight.w800, color: Utils.border, fontSize: 12)),
-                ),
-              ],
+          NeoAlert.danger(
+            text: 'Beban kerja melebihi kapasitas: ${overloaded.employeeName} (${overloaded.percentageText})',
+            action: NeoButton(
+              text: 'Atur Pekerjaan',
+              size: NeoButtonSize.sm,
+              variant: NeoButtonVariant.neutral,
+              onPressed: () => Navigator.pushReplacementNamed(context, '/pekerjaan'),
             ),
           ),
           const SizedBox(height: 24),
         ],
 
-        // KPI Summary Cards
+        // 7.1 Baris 4 Kartu KPI
         Row(
           children: [
-            _buildPersonalKPICard(
+            NeoKPICard(
               title: 'TOTAL KARYAWAN',
               value: '${data.totalEmployees}',
-              subtitle: 'Karyawan aktif terdaftar',
+              caption: 'Karyawan aktif terdaftar',
               icon: Icons.people,
-              color: Utils.primary,
+              iconContainerColor: Utils.neoBlack,
+              iconColor: Utils.neoCream,
             ),
             const SizedBox(width: 16),
-            _buildPersonalKPICard(
+            NeoKPICard(
               title: 'HADIR HARI INI',
               value: '${data.presentToday}',
-              subtitle: '${data.presentPercentage} tingkat kehadiran',
-              icon: Icons.access_time_rounded,
-              color: Utils.secondary,
+              caption: '${data.presentPercentage} tingkat kehadiran',
+              icon: Icons.calendar_today,
+              iconContainerColor: Utils.neoGreen,
+              iconColor: Utils.neoBlack,
             ),
             const SizedBox(width: 16),
-            _buildPersonalKPICard(
+            NeoKPICard(
               title: 'PEKERJAAN AKTIF',
               value: '${data.activeTasks}',
-              subtitle: 'Dalam ${data.activeTeamsCount} departemen tim',
-              icon: Icons.assignment_outlined,
-              color: const Color(0xFFF59E0B),
+              caption: 'Dalam ${data.activeTeamsCount} tim departemen',
+              icon: Icons.assignment,
+              iconContainerColor: Utils.neoBlue,
+              iconColor: Utils.neoCream,
             ),
             const SizedBox(width: 16),
-            _buildPersonalKPICard(
+            NeoKPICard(
               title: 'LEMBUR HARI INI',
               value: '${data.overtimeCount}',
-              subtitle: 'Staf lembur melebihi jam kerja',
-              icon: Icons.timer,
-              color: Utils.danger,
+              caption: 'Staf lembur hari ini',
+              icon: Icons.access_time_filled,
+              iconContainerColor: Utils.neoYellow,
+              iconColor: Utils.neoBlack,
             ),
           ],
         ),
         const SizedBox(height: 24),
 
-        // Company Workload Section
+        // 8.2 Baris kedua: Asimetris 8/4 Grid
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Workload Table
+            // Kolom 8/12: Meter Beban Kerja Karyawan
             Expanded(
-              flex: 3,
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Utils.border, width: 2),
-                  boxShadow: const [
-                    BoxShadow(color: Utils.border, offset: Offset(4, 4), blurRadius: 0),
-                  ],
-                ),
+              flex: 8,
+              child: NeoContainer(
+                padding: const EdgeInsets.all(24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Beban Kerja Karyawan',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Utils.border),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF5F1E8),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: Utils.border, width: 1.5),
+                        Text(
+                          'BEBAN KERJA KARYAWAN',
+                          style: GoogleFonts.spaceGrotesk(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Utils.neoBlack,
                           ),
-                          child: const Text('Periode Berjalan', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
                         ),
+                        const NeoTag(label: 'PERIODE BERJALAN'),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    ...data.workloadList.map((wl) => _buildWorkloadRow(wl)),
+                    const SizedBox(height: 20),
+                    if (data.workloadList.isEmpty) ...[
+                      const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Center(child: Text('Belum ada data beban kerja.')),
+                      ),
+                    ] else ...[
+                      ...data.workloadList.map((wl) => _buildWorkloadRow(wl)),
+                    ],
                   ],
                 ),
               ),
             ),
-            const SizedBox(width: 20),
-            // Upcoming Tasks Table
+            const SizedBox(width: 24),
+
+            // Kolom 4/12: Pekerjaan Mendekati Deadline
             Expanded(
-              flex: 2,
-              child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Utils.border, width: 2),
-                  boxShadow: const [
-                    BoxShadow(color: Utils.border, offset: Offset(4, 4), blurRadius: 0),
-                  ],
-                ),
+              flex: 4,
+              child: NeoContainer(
+                padding: const EdgeInsets.all(24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Pekerjaan Mendekati Deadline',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Utils.border),
+                    Text(
+                      'DEADLINE TERDEKAT',
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Utils.neoBlack,
+                      ),
                     ),
                     const SizedBox(height: 16),
-                    ...data.taskList.map((task) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                    if (data.taskList.isEmpty) ...[
+                      const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Center(child: Text('Tidak ada pekerjaan mendekati deadline.')),
+                      ),
+                    ] else ...[
+                      ...data.taskList.map((task) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: const BoxDecoration(
+                            border: Border(bottom: Utils.borderSideWSm),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    task['title'].toString(),
-                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Utils.border),
+                                  Expanded(
+                                    child: Text(
+                                      task['title'].toString(),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: Utils.neoBlack,
+                                      ),
+                                    ),
                                   ),
-                                  Text(
-                                    '${task['assigned_to_name']} • ${_formatDate(task['deadline'].toString())}',
-                                    style: const TextStyle(fontSize: 11, color: Color(0xFF666666)),
-                                  ),
+                                  NeoBadge.taskStatus(task['status'].toString()),
                                 ],
                               ),
-                            ),
-                            _buildStatusBadge(task['status'].toString()),
-                          ],
-                        ),
-                      );
-                    }),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${task['assigned_to_name']} • ${_formatDate(task['deadline'].toString())}',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  color: Utils.neoBlack,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ],
                   ],
                 ),
               ),
@@ -519,39 +430,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildWorkloadRow(WorkloadModel wl) {
-    final pct = (wl.percentage / 100.0).clamp(0.0, 1.0);
-    final color = wl.isOverload ? Utils.danger : (wl.percentage >= 80 ? Utils.secondary : Utils.primary);
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '${wl.employeeName} (${wl.departmentName})',
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: Utils.border),
-              ),
-              Text(
-                '${wl.assignedHours.toStringAsFixed(0)} / ${wl.capacityHours.toStringAsFixed(0)} Jam (${wl.percentageText})',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: color),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: pct,
-              minHeight: 10,
-              backgroundColor: const Color(0xFFEEEEEE),
-              valueColor: AlwaysStoppedAnimation<Color>(color),
-            ),
-          ),
-        ],
-      ),
+    return NeoWorkloadMeter(
+      percentage: wl.percentage,
+      label: '${wl.employeeName} (${wl.departmentName})',
+      detailText: '${wl.assignedHours.toStringAsFixed(0)}j / ${wl.capacityHours.toStringAsFixed(0)}j Kapasitas (${wl.percentageText})',
     );
   }
 
@@ -571,13 +453,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ? const Center(
                   child: Padding(
                     padding: EdgeInsets.all(40),
-                    child: CircularProgressIndicator(color: Utils.primary),
+                    child: CircularProgressIndicator(color: Utils.neoBlack),
                   ),
                 )
               : RefreshIndicator(
+                  color: Utils.neoBlack,
+                  backgroundColor: Utils.neoCream,
                   onRefresh: () => controller.loadDashboard(auth.currentUser),
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(32),
                     child: isEmployee
                         ? _buildKaryawanPersonalDashboard(data, auth)
                         : _buildAdminDashboard(data),

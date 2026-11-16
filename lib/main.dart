@@ -15,10 +15,9 @@ import 'package:kita_kerja/screens/karyawan_form_screen.dart';
 import 'package:kita_kerja/screens/karyawan_screen.dart';
 import 'package:kita_kerja/screens/kehadiran_screen.dart';
 import 'package:kita_kerja/screens/login_screen.dart';
-import 'package:kita_kerja/screens/master_data_screen.dart';
 import 'package:kita_kerja/screens/pekerjaan_form_screen.dart';
 import 'package:kita_kerja/screens/pekerjaan_screen.dart';
-import 'package:kita_kerja/screens/profile_screen.dart';
+import 'package:kita_kerja/screens/settings_screen.dart';
 import 'package:kita_kerja/screens/register_screen.dart';
 import 'package:kita_kerja/screens/splash_screen.dart';
 import 'package:kita_kerja/screens/user_list_screen.dart';
@@ -52,18 +51,41 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           useMaterial3: true,
-          scaffoldBackgroundColor: Utils.background,
-          textTheme: GoogleFonts.spaceGroteskTextTheme(
+          scaffoldBackgroundColor: Utils.neoCream,
+          splashFactory: NoSplash.splashFactory,
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+          hoverColor: Colors.transparent,
+          textTheme: GoogleFonts.interTextTheme(
             Theme.of(context).textTheme,
+          ).apply(
+            bodyColor: Utils.neoBlack,
+            displayColor: Utils.neoBlack,
+          ),
+          cardTheme: const CardThemeData(
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+            color: Utils.neoCream,
+          ),
+          dialogTheme: const DialogThemeData(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.zero,
+              side: Utils.borderSideW,
+            ),
+            backgroundColor: Utils.neoCream,
           ),
           inputDecorationTheme: const InputDecorationTheme(
-            focusColor: Utils.primary,
+            filled: true,
+            fillColor: Utils.neoCream,
+            focusColor: Utils.neoBlack,
             border: Utils.outlinedBorder,
             focusedBorder: Utils.focusBorder,
             errorBorder: Utils.errorBorder,
             enabledBorder: Utils.outlinedBorder,
-            floatingLabelStyle: TextStyle(color: Utils.border),
-            prefixIconColor: Utils.border,
+            floatingLabelStyle: TextStyle(color: Utils.neoBlack),
+            prefixIconColor: Utils.neoBlack,
+            suffixIconColor: Utils.neoBlack,
           ),
         ),
         initialRoute: '/',
@@ -89,11 +111,16 @@ class MyApp extends StatelessWidget {
             case '/dashboard':
               page = const DashboardScreen();
               break;
+            case '/pengaturan':
+            case '/settings':
+              final initialTab = (settings.arguments is int) ? (settings.arguments as int) : 0;
+              page = SettingsScreen(initialTab: initialTab);
+              break;
             case '/master-data':
-              page = const MasterDataScreen();
+              page = const SettingsScreen(initialTab: 1);
               break;
             case '/profile':
-              page = const ProfileScreen();
+              page = const SettingsScreen(initialTab: 0);
               break;
             case '/karyawan':
               page = const KaryawanScreen();

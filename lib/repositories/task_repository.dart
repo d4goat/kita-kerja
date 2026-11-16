@@ -87,12 +87,23 @@ class TaskRepository {
     ),
   ];
 
-  Future<List<TaskModel>> getTasks({String? search, String? status}) async {
+  Future<List<TaskModel>> getTasks({
+    String? search,
+    String? status,
+    int? supervisorId,
+  }) async {
     try {
       var connection = await DatabaseConnection.getConnection();
       try {
         Map<String, dynamic> params = {};
         List<String> conditions = [];
+        String joinSupervisor = '';
+
+        if (supervisorId != null && supervisorId > 0) {
+          joinSupervisor = 'LEFT JOIN employee_supervisors es ON t.assigned_to = es.employee_id';
+          conditions.add('(es.supervisor_id = :sup_id OR t.assigned_to = :sup_id OR t.created_by = :sup_id)');
+          params['sup_id'] = supervisorId;
+        }
 
         if (search != null && search.trim().isNotEmpty) {
           conditions.add(
@@ -120,6 +131,7 @@ class TaskRepository {
           FROM tasks t
           INNER JOIN job_categories jc ON t.category_id = jc.id
           INNER JOIN employees e ON t.assigned_to = e.id
+          $joinSupervisor
           $whereClause
           ORDER BY t.deadline ASC, t.id DESC
         ''';

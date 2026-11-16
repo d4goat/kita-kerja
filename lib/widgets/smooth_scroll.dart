@@ -96,7 +96,10 @@ class _SmoothScrollWrapperState extends State<SmoothScrollWrapper> {
           physics: const BouncingScrollPhysics(
             parent: AlwaysScrollableScrollPhysics(),
           ),
-          child: widget.child,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: double.infinity),
+            child: widget.child,
+          ),
         ),
       ),
     );

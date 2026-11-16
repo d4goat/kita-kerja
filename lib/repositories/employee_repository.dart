@@ -39,6 +39,8 @@ class EmployeeRepository {
       salaryTypeName: 'Bulanan',
       workScheduleId: 1,
       workScheduleName: 'Jam Kerja Normal',
+      supervisorId: 1,
+      supervisorName: 'Admin KerjaKita',
     ),
     EmployeeModel(
       id: 3,
@@ -57,6 +59,8 @@ class EmployeeRepository {
       salaryTypeName: 'Bulanan',
       workScheduleId: 1,
       workScheduleName: 'Jam Kerja Normal',
+      supervisorId: 2,
+      supervisorName: 'Budi Manager',
     ),
     EmployeeModel(
       id: 4,
@@ -75,6 +79,8 @@ class EmployeeRepository {
       salaryTypeName: 'Bulanan',
       workScheduleId: 2,
       workScheduleName: 'Shift Pagi',
+      supervisorId: 2,
+      supervisorName: 'Budi Manager',
     ),
     EmployeeModel(
       id: 5,
@@ -93,6 +99,8 @@ class EmployeeRepository {
       salaryTypeName: 'Bulanan',
       workScheduleId: 1,
       workScheduleName: 'Jam Kerja Normal',
+      supervisorId: 2,
+      supervisorName: 'Budi Manager',
     ),
     EmployeeModel(
       id: 6,
@@ -111,6 +119,8 @@ class EmployeeRepository {
       salaryTypeName: 'Kontrak',
       workScheduleId: 1,
       workScheduleName: 'Jam Kerja Normal',
+      supervisorId: 2,
+      supervisorName: 'Budi Manager',
     ),
   ];
 
@@ -118,6 +128,7 @@ class EmployeeRepository {
     String? search,
     int? departmentId,
     String? status,
+    int? supervisorId,
     int page = 1,
     int pageSize = 10,
   }) async {
@@ -142,10 +153,18 @@ class EmployeeRepository {
           params['status'] = status;
         }
 
+        if (supervisorId != null && supervisorId > 0) {
+          conditions.add('(es.supervisor_id = :supervisor_id OR e.id = :supervisor_id)');
+          params['supervisor_id'] = supervisorId;
+        }
+
         String whereClause = conditions.isNotEmpty ? 'WHERE ${conditions.join(" AND ")}' : '';
         int offset = (page - 1) * pageSize;
 
-        var countResult = await connection.execute('SELECT COUNT(*) as total FROM employees e $whereClause', params);
+        var countResult = await connection.execute(
+          'SELECT COUNT(DISTINCT e.id) as total FROM employees e LEFT JOIN employee_supervisors es ON e.id = es.employee_id $whereClause',
+          params,
+        );
         int total = 0;
         if (countResult.rows.isNotEmpty) {
           total = int.tryParse(countResult.rows.first.assoc()['total'] ?? '') ?? 0;
@@ -158,12 +177,16 @@ class EmployeeRepository {
             p.name AS position_name,
             d.name AS department_name,
             st.name AS salary_type_name,
-            ws.name AS work_schedule_name
+            ws.name AS work_schedule_name,
+            es.supervisor_id,
+            sup.full_name AS supervisor_name
           FROM employees e
           INNER JOIN positions p ON e.position_id = p.id
           INNER JOIN departments d ON e.department_id = d.id
           INNER JOIN salary_types st ON e.salary_type_id = st.id
           INNER JOIN work_schedules ws ON e.work_schedule_id = ws.id
+          LEFT JOIN employee_supervisors es ON e.id = es.employee_id
+          LEFT JOIN employees sup ON es.supervisor_id = sup.id
           $whereClause
           ORDER BY e.id ASC
           LIMIT $pageSize OFFSET $offset
@@ -183,7 +206,8 @@ class EmployeeRepository {
             e.employeeCode.toLowerCase().contains(search.toLowerCase());
         bool matchDept = departmentId == null || departmentId == 0 || e.departmentId == departmentId;
         bool matchStatus = status == null || status == 'all' || e.status == status;
-        return matchSearch && matchDept && matchStatus;
+        bool matchSup = supervisorId == null || supervisorId == 0 || e.supervisorId == supervisorId || e.id == supervisorId;
+        return matchSearch && matchDept && matchStatus && matchSup;
       }).toList();
       return {'total': filtered.length, 'data': filtered};
     }
@@ -201,12 +225,13 @@ class EmployeeRepository {
     required String joinDate,
     String status = 'active',
     String? password,
+    int? supervisorId,
   }) async {
     try {
       var connection = await DatabaseConnection.getConnection();
       try {
         await connection.transactional((conn) async {
-          await conn.execute(
+          final res = await conn.execute(
             '''
             INSERT INTO employees 
             (employee_code, full_name, email, phone, position_id, department_id, salary_type_id, work_schedule_id, join_date, status)
@@ -225,6 +250,17 @@ class EmployeeRepository {
               'status': status,
             },
           );
+
+          final newEmpId = res.lastInsertID.toInt();
+          if (supervisorId != null && supervisorId > 0 && newEmpId > 0) {
+            await conn.execute(
+              '''
+              INSERT INTO employee_supervisors (employee_id, supervisor_id)
+              VALUES (:emp_id, :sup_id)
+              ''',
+              {'emp_id': newEmpId, 'sup_id': supervisorId},
+            );
+          }
 
           if (password != null && password.trim().isNotEmpty) {
             await conn.execute(
@@ -265,6 +301,13 @@ class EmployeeRepository {
           workScheduleName: 'Jam Kerja Normal',
           joinDate: joinDate,
           status: status,
+          supervisorId: supervisorId,
+          supervisorName: supervisorId != null
+              ? _fallbackEmployees
+                  .firstWhere((e) => e.id == supervisorId,
+                      orElse: () => _fallbackEmployees.first)
+                  .fullName
+              : null,
         ),
       );
       return true;
@@ -283,32 +326,50 @@ class EmployeeRepository {
     required int workScheduleId,
     required String joinDate,
     required String status,
+    int? supervisorId,
   }) async {
     try {
       var connection = await DatabaseConnection.getConnection();
       try {
-        await connection.execute(
-          '''
-          UPDATE employees 
-          SET employee_code = :employee_code, full_name = :full_name, email = :email, phone = :phone, 
-              position_id = :position_id, department_id = :department_id, salary_type_id = :salary_type_id, 
-              work_schedule_id = :work_schedule_id, join_date = :join_date, status = :status
-          WHERE id = :id
-          ''',
-          {
-            'id': id,
-            'employee_code': employeeCode,
-            'full_name': fullName,
-            'email': email,
-            'phone': phone,
-            'position_id': positionId,
-            'department_id': departmentId,
-            'salary_type_id': salaryTypeId,
-            'work_schedule_id': workScheduleId,
-            'join_date': joinDate,
-            'status': status,
-          },
-        );
+        await connection.transactional((conn) async {
+          await conn.execute(
+            '''
+            UPDATE employees 
+            SET employee_code = :employee_code, full_name = :full_name, email = :email, phone = :phone, 
+                position_id = :position_id, department_id = :department_id, salary_type_id = :salary_type_id, 
+                work_schedule_id = :work_schedule_id, join_date = :join_date, status = :status
+            WHERE id = :id
+            ''',
+            {
+              'id': id,
+              'employee_code': employeeCode,
+              'full_name': fullName,
+              'email': email,
+              'phone': phone,
+              'position_id': positionId,
+              'department_id': departmentId,
+              'salary_type_id': salaryTypeId,
+              'work_schedule_id': workScheduleId,
+              'join_date': joinDate,
+              'status': status,
+            },
+          );
+
+          await conn.execute(
+            'DELETE FROM employee_supervisors WHERE employee_id = :id',
+            {'id': id},
+          );
+
+          if (supervisorId != null && supervisorId > 0) {
+            await conn.execute(
+              '''
+              INSERT INTO employee_supervisors (employee_id, supervisor_id)
+              VALUES (:id, :sup_id)
+              ''',
+              {'id': id, 'sup_id': supervisorId},
+            );
+          }
+        });
         return true;
       } finally {
         await connection.close();
@@ -335,9 +396,43 @@ class EmployeeRepository {
           workScheduleName: prev.workScheduleName,
           joinDate: joinDate,
           status: status,
+          supervisorId: supervisorId,
+          supervisorName: supervisorId != null
+              ? _fallbackEmployees
+                  .firstWhere((e) => e.id == supervisorId,
+                      orElse: () => _fallbackEmployees.first)
+                  .fullName
+              : null,
         );
       }
       return true;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getSupervisors() async {
+    try {
+      var connection = await DatabaseConnection.getConnection();
+      try {
+        final query = '''
+          SELECT e.id, e.employee_code, e.full_name, p.name AS position_name
+          FROM employees e
+          INNER JOIN positions p ON e.position_id = p.id
+          WHERE e.status = 'active'
+          ORDER BY e.full_name ASC
+        ''';
+        final results = await connection.execute(query);
+        return results.rows.map((row) => row.assoc()).toList();
+      } finally {
+        await connection.close();
+      }
+    } catch (err) {
+      Utils.logger.w('getSupervisors fallback: $err');
+      return _fallbackEmployees.map((e) => {
+        'id': e.id,
+        'employee_code': e.employeeCode,
+        'full_name': e.fullName,
+        'position_name': e.positionName,
+      }).toList();
     }
   }
 

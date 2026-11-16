@@ -122,18 +122,62 @@ class AuthController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updateProfile({
+  Future<bool> updateProfile({
     required String name,
     required String email,
     String? phone,
-  }) {
-    if (_currentUser != null) {
-      _currentUser = _currentUser!.copyWith(
-        name: name,
-        email: email,
-        phone: phone,
-      );
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      if (_currentUser != null) {
+        await _repository.updateProfile(
+          userId: _currentUser!.id,
+          name: name,
+          email: email,
+          phone: phone,
+        );
+        _currentUser = _currentUser!.copyWith(
+          name: name,
+          email: email,
+          phone: phone,
+        );
+      }
+      return true;
+    } catch (err) {
+      return false;
+    } finally {
+      _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<bool> changePassword({
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      if (_currentUser != null) {
+        return await _repository.changePassword(
+          userId: _currentUser!.id,
+          oldPassword: oldPassword,
+          newPassword: newPassword,
+        );
+      }
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> saveRememberMe(String email, bool remember) async {
+    await _repository.saveRememberMe(email, remember);
+  }
+
+  Future<Map<String, dynamic>> loadRememberMe() async {
+    return await _repository.getRememberMe();
   }
 }

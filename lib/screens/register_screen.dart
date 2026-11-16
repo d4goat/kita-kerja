@@ -1,9 +1,10 @@
 import 'package:bcrypt/bcrypt.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:kita_kerja/controllers/auth_controller.dart';
 import 'package:kita_kerja/layouts/auth_layout.dart';
-import 'package:kita_kerja/lib/utils.dart';
+import 'package:kita_kerja/core/utils/utils.dart';
 import 'package:kita_kerja/widgets/brand_header.dart';
 import 'package:kita_kerja/widgets/neo_components.dart';
 import 'package:provider/provider.dart';
@@ -47,7 +48,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'Konfirmasi kata sandi tidak sesuai!',
           ToastificationType.error,
           Icons.close,
-          Utils.danger,
+          Utils.neoRed,
         );
         return;
       }
@@ -60,6 +61,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           _passwordController.text,
         );
 
+        if (!mounted) return;
         final success = await context.read<AuthController>().registerOwner(
           namaUsaha: _namaUsahaController.text.trim(),
           namaLengkap: _namaLengkapController.text.trim(),
@@ -76,7 +78,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             'Pendaftaran akun Owner berhasil! Silakan masuk.',
             ToastificationType.success,
             Icons.check,
-            Utils.success,
+            Utils.neoGreen,
           );
           Navigator.pushReplacementNamed(context, '/login');
         } else {
@@ -85,7 +87,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             'Gagal mendaftarkan akun. Silakan coba lagi.',
             ToastificationType.error,
             Icons.close,
-            Utils.danger,
+            Utils.neoRed,
           );
         }
       } catch (err) {
@@ -94,12 +96,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
         String errStr = err.toString();
         String msg = 'Gagal mendaftarkan akun: $errStr';
-        Utils.logger.e(msg);
 
         if (errStr.contains('1062') ||
             errStr.toLowerCase().contains('duplicate entry')) {
-          msg =
-              'Email "${_emailController.text.trim()}" sudah terdaftar. Silakan gunakan email lain.';
+          msg = 'Email "${_emailController.text.trim()}" sudah terdaftar. Silakan gunakan email lain.';
         }
 
         Utils.toast(
@@ -107,7 +107,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           msg,
           ToastificationType.error,
           Icons.close,
-          Utils.danger,
+          Utils.neoRed,
         );
       }
     }
@@ -117,145 +117,153 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     return AuthLayout(
       title: "Register Form",
-      child: Expanded(
-        child: NeoCard(
-          maxWidth: 440,
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const BrandHeader(),
-                const SizedBox(height: 20),
-                const Text(
-                  'Buat Akun Owner',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: Utils.border,
+      child: Container(
+        padding: const EdgeInsets.all(28),
+        decoration: const BoxDecoration(
+          color: Utils.neoCream,
+          borderRadius: BorderRadius.zero,
+          border: Utils.borderW,
+          boxShadow: Utils.shadowLg,
+        ),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const BrandHeader(),
+              const SizedBox(height: 20),
+              Text(
+                'Buat Akun Owner',
+                style: GoogleFonts.spaceGrotesk(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: Utils.neoBlack,
+                ),
+              ),
+              const SizedBox(height: 16),
+              NeoTextField(
+                label: 'Nama Usaha',
+                placeholder: 'misal: CV Maju Jaya Makmur',
+                controller: _namaUsahaController,
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return 'Nama usaha wajib diisi';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              NeoTextField(
+                label: 'Nama Lengkap',
+                placeholder: 'Nama lengkap pemilik usaha',
+                controller: _namaLengkapController,
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return 'Nama lengkap wajib diisi';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              NeoTextField(
+                label: 'Email',
+                placeholder: 'nama@perusahaan.com',
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return 'Email wajib diisi';
+                  }
+                  if (!val.contains('@')) {
+                    return 'Format email tidak valid';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              NeoTextField(
+                label: 'Kata Sandi',
+                placeholder: 'Minimal 8 karakter',
+                controller: _passwordController,
+                isPassword: true,
+                validator: (val) {
+                  if (val == null || val.length < 8) {
+                    return 'Kata sandi minimal 8 karakter';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              NeoTextField(
+                label: 'Konfirmasi Kata Sandi',
+                placeholder: 'Ulangi kata sandi',
+                controller: _confirmPasswordController,
+                isPassword: true,
+                validator: (val) {
+                  if (val == null || val.isEmpty) {
+                    return 'Konfirmasi kata sandi wajib diisi';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 20),
+              NeoButton(
+                text: 'DAFTAR',
+                isFullWidth: true,
+                variant: NeoButtonVariant.primary,
+                isLoading: _isLoading,
+                onPressed: _handleRegister,
+              ),
+              const SizedBox(height: 12),
+              Center(
+                child: Text(
+                  'Akun staf karyawan ditambahkan melalui menu Manajemen Karyawan.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Utils.neoBlack,
                   ),
                 ),
-                const SizedBox(height: 16),
-                NeoTextField(
-                  label: 'Nama Usaha',
-                  placeholder: 'misal: CV Maju Jaya Makmur',
-                  controller: _namaUsahaController,
-                  validator: (val) {
-                    if (val == null || val.trim().isEmpty) {
-                      return 'Nama usaha wajib diisi';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                NeoTextField(
-                  label: 'Nama Lengkap',
-                  placeholder: 'Nama lengkap pemilik usaha',
-                  controller: _namaLengkapController,
-                  validator: (val) {
-                    if (val == null || val.trim().isEmpty) {
-                      return 'Nama lengkap wajib diisi';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                NeoTextField(
-                  label: 'Email',
-                  placeholder: 'nama@perusahaan.com',
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (val) {
-                    if (val == null || val.trim().isEmpty) {
-                      return 'Email wajib diisi';
-                    }
-                    if (!val.contains('@')) {
-                      return 'Format email tidak valid';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                NeoTextField(
-                  label: 'Kata Sandi',
-                  placeholder: 'Minimal 8 karakter',
-                  controller: _passwordController,
-                  isPassword: true,
-                  validator: (val) {
-                    if (val == null || val.length < 8) {
-                      return 'Kata sandi minimal 8 karakter';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                NeoTextField(
-                  label: 'Konfirmasi Kata Sandi',
-                  placeholder: 'Ulangi kata sandi',
-                  controller: _confirmPasswordController,
-                  isPassword: true,
-                  validator: (val) {
-                    if (val == null || val.isEmpty) {
-                      return 'Konfirmasi kata sandi wajib diisi';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                NeoButton(
-                  text: 'Buat Akun Owner',
-                  isLoading: _isLoading,
-                  onPressed: _handleRegister,
-                ),
-                const SizedBox(height: 10),
-                const Center(
-                  child: Text(
-                    'Akun karyawan dibuat oleh Owner/Admin',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w400,
-                      color: Color(0xFF666666),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Divider(color: Color(0xFFE5E5E5), height: 1),
-                const SizedBox(height: 14),
-                Center(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        'Sudah punya akun? ',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: Utils.border,
-                        ),
+              ),
+              const SizedBox(height: 16),
+              const Divider(color: Utils.neoBlack, thickness: 2, height: 2),
+              const SizedBox(height: 16),
+              Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Sudah punya akun? ',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: Utils.neoBlack,
                       ),
-                      MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: GestureDetector(
-                          onTap: () {
-                            Navigator.pop(context);
-                          },
-                          child: const Text(
-                            'Masuk',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: Utils.primary,
-                              decoration: TextDecoration.underline,
-                            ),
+                    ),
+                    MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.pop(context);
+                        },
+                        child: Text(
+                          'Login',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: Utils.neoBlack,
+                            decoration: TextDecoration.underline,
+                            decorationThickness: 2,
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:kita_kerja/controllers/auth_controller.dart';
 import 'package:kita_kerja/core/utils/utils.dart';
 import 'package:kita_kerja/core/database/db_exception.dart';
@@ -23,6 +24,23 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
 
   @override
+  void initState() {
+    super.initState();
+    _loadSavedCredentials();
+  }
+
+  void _loadSavedCredentials() async {
+    final auth = Provider.of<AuthController>(context, listen: false);
+    final data = await auth.loadRememberMe();
+    if (mounted && (data['remember'] == true) && (data['email'] as String).isNotEmpty) {
+      setState(() {
+        _rememberMe = true;
+        _emailController.text = data['email'] as String;
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
@@ -44,17 +62,19 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() => _isLoading = false);
 
         if (user != null) {
+          await auth.saveRememberMe(email, _rememberMe);
+          if (!mounted) return;
           final targetRoute = auth.initialRouteForRole;
 
           Utils.toast(
             context,
-            'Login berhasil sebagai ${user.name} (${user.role.toUpperCase()})!\nNavigasi otomatis ke: $targetRoute',
+            'Login berhasil sebagai ${user.name} (${user.role.toUpperCase()})',
             ToastificationType.success,
             Icons.check,
-            Utils.success,
+            Utils.neoGreen,
           );
 
-          await Future.delayed(const Duration(milliseconds: 600));
+          await Future.delayed(const Duration(milliseconds: 400));
           if (!mounted) return;
           Navigator.pushReplacementNamed(context, targetRoute);
         } else {
@@ -63,7 +83,7 @@ class _LoginScreenState extends State<LoginScreen> {
             'Email atau kata sandi salah, silakan coba lagi.',
             ToastificationType.error,
             Icons.close,
-            Utils.danger,
+            Utils.neoRed,
           );
         }
       } on DatabaseOfflineException catch (e) {
@@ -71,10 +91,10 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() => _isLoading = false);
         Utils.toast(
           context,
-          'Koneksi database gagal.\n${e.message}',
+          'Koneksi database gagal: ${e.message}',
           ToastificationType.warning,
           Icons.wifi_off_rounded,
-          Utils.warning,
+          Utils.neoYellow,
         );
       } catch (err) {
         if (!mounted) return;
@@ -85,7 +105,7 @@ class _LoginScreenState extends State<LoginScreen> {
           'Gagal melakukan autentikasi: $err',
           ToastificationType.error,
           Icons.close,
-          Utils.danger,
+          Utils.neoRed,
         );
       }
     }
@@ -109,181 +129,190 @@ class _LoginScreenState extends State<LoginScreen> {
     Utils().init(context);
     return AuthLayout(
       title: 'Login Form',
-      child: Expanded(
-        child: NeoCard(
-          maxWidth: 440,
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const BrandHeader(),
-                const SizedBox(height: 16),
-                const Text(
-                  'Masuk ke Akun Anda',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: Utils.border,
-                  ),
+      child: Container(
+        padding: const EdgeInsets.all(28),
+        decoration: const BoxDecoration(
+          color: Utils.neoCream,
+          borderRadius: BorderRadius.zero,
+          border: Utils.borderW,
+          boxShadow: Utils.shadowLg,
+        ),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const BrandHeader(),
+              const SizedBox(height: 20),
+              Text(
+                'Masuk ke Akun Anda',
+                style: GoogleFonts.spaceGrotesk(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: Utils.neoBlack,
                 ),
-                const SizedBox(height: 16),
+              ),
+              const SizedBox(height: 16),
 
-                NeoTextField(
-                  label: 'Email',
-                  placeholder: 'admin@kerjakita.local / citra@...',
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (val) {
-                    if (val == null || val.trim().isEmpty) {
-                      return 'Email wajib diisi';
-                    }
-                    if (!val.contains('@')) {
-                      return 'Format email tidak valid';
-                    }
-                    return null;
-                  },
+              NeoTextField(
+                label: 'Email',
+                placeholder: 'admin@kerjakita.local / citra@...',
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                validator: (val) {
+                  if (val == null || val.trim().isEmpty) {
+                    return 'Email wajib diisi';
+                  }
+                  if (!val.contains('@')) {
+                    return 'Format email tidak valid';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 14),
+              NeoTextField(
+                label: 'Kata Sandi',
+                placeholder: 'Masukkan kata sandi',
+                controller: _passwordController,
+                isPassword: true,
+                validator: (val) {
+                  if (val == null || val.isEmpty) {
+                    return 'Kata sandi wajib diisi';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 14),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  NeoCheckbox(
+                    value: _rememberMe,
+                    onChanged: (val) => setState(() => _rememberMe = val),
+                    label: 'Ingat Saya',
+                  ),
+                  MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.pushNamed(context, '/forgot-password');
+                      },
+                      child: Text(
+                        'Lupa Kata Sandi?',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Utils.neoBlack,
+                          decoration: TextDecoration.underline,
+                          decorationThickness: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              NeoButton(
+                text: 'LOGIN',
+                isFullWidth: true,
+                variant: NeoButtonVariant.primary,
+                isLoading: _isLoading,
+                onPressed: _handleLogin,
+              ),
+              const SizedBox(height: 20),
+
+              // Quick Demo Account Helpers
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: const BoxDecoration(
+                  color: Utils.neoCream,
+                  borderRadius: BorderRadius.zero,
+                  border: Utils.borderWSm,
+                  boxShadow: Utils.shadowSm,
                 ),
-                const SizedBox(height: 12),
-                NeoTextField(
-                  label: 'Kata Sandi',
-                  placeholder: 'Masukkan kata sandi',
-                  controller: _passwordController,
-                  isPassword: true,
-                  validator: (val) {
-                    if (val == null || val.isEmpty) {
-                      return 'Kata sandi wajib diisi';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    NeoCheckbox(
-                      value: _rememberMe,
-                      onChanged: (val) => setState(() => _rememberMe = val),
-                      label: 'Ingat Saya',
+                    Text(
+                      'AKUN DEMO CEPAT:',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: Utils.neoBlack,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: NeoButton(
+                            text: 'Admin',
+                            size: NeoButtonSize.sm,
+                            variant: NeoButtonVariant.neutral,
+                            onPressed: () => _quickFill('admin'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: NeoButton(
+                            text: 'Manager',
+                            size: NeoButtonSize.sm,
+                            variant: NeoButtonVariant.neutral,
+                            onPressed: () => _quickFill('manager'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: NeoButton(
+                            text: 'Karyawan',
+                            size: NeoButtonSize.sm,
+                            variant: NeoButtonVariant.neutral,
+                            onPressed: () => _quickFill('employee'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 18),
+              Center(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Belum punya akun? ',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: Utils.neoBlack,
+                      ),
                     ),
                     MouseRegion(
                       cursor: SystemMouseCursors.click,
                       child: GestureDetector(
                         onTap: () {
-                          Navigator.pushNamed(context, '/forgot-password');
+                          Navigator.pushNamed(context, '/register');
                         },
-                        child: const Text(
-                          'Lupa Kata Sandi?',
-                          style: TextStyle(
-                            fontSize: 12,
+                        child: Text(
+                          'Register',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: Utils.primary,
+                            color: Utils.neoBlack,
+                            decoration: TextDecoration.underline,
+                            decorationThickness: 2,
                           ),
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                NeoButton(
-                  text: 'Masuk',
-                  isLoading: _isLoading,
-                  onPressed: _handleLogin,
-                ),
-                const SizedBox(height: 16),
-
-                // Quick Demo Account Helpers
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF5F1E8),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Utils.border, width: 1.5),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Akun Demo (Klik untuk isi cepat):',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Utils.border),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () => _quickFill('admin'),
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(color: Utils.border, width: 1.5),
-                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                              ),
-                              child: const Text('Admin', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Utils.border)),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () => _quickFill('manager'),
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(color: Utils.border, width: 1.5),
-                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                              ),
-                              child: const Text('Manager', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Utils.border)),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () => _quickFill('employee'),
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(color: Utils.border, width: 1.5),
-                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                              ),
-                              child: const Text('Karyawan', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Utils.border)),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-                Center(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        'Belum punya akun? ',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: Utils.border,
-                        ),
-                      ),
-                      MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: GestureDetector(
-                          onTap: () {
-                            Navigator.pushNamed(context, '/register');
-                          },
-                          child: const Text(
-                            'Daftar',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: Utils.primary,
-                              decoration: TextDecoration.underline,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

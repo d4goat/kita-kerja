@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:kita_kerja/lib/utils.dart';
+import 'package:kita_kerja/core/utils/utils.dart';
 
 /// Fungsi murni (pure function) untuk memutar string secara melingkar ke KANAN sebanyak [steps] karakter.
 ///
@@ -101,9 +101,6 @@ class _AsciiPreloaderState extends State<AsciiPreloader>
   // Animasi exit untuk tirai preloader overlay (slide up ke atas penuh)
   late final Animation<Offset> _curtainSlideAnimation;
 
-  // Animasi lengkungan elastis di bagian bawah tirai saat ditarik ke atas
-  late final Animation<double> _curveAnimation;
-
   // Animasi enter untuk konten utama (child) yang tersingkap (slide up halus + fade in)
   late final Animation<Offset> _childSlideAnimation;
   late final Animation<double> _childFadeAnimation;
@@ -149,31 +146,7 @@ class _AsciiPreloaderState extends State<AsciiPreloader>
           ),
         );
 
-    // 3. Lengkungan Bawah Tirai (Bottom Curve): mengembang dari 0 ke puncak lalu merata kembali saat slide selesai
-    _curveAnimation =
-        TweenSequence<double>([
-          TweenSequenceItem(
-            tween: Tween<double>(
-              begin: 0.0,
-              end: 1.0,
-            ).chain(CurveTween(curve: Curves.easeOutQuad)),
-            weight: 35.0,
-          ),
-          TweenSequenceItem(
-            tween: Tween<double>(
-              begin: 1.0,
-              end: 0.0,
-            ).chain(CurveTween(curve: Curves.easeInQuad)),
-            weight: 65.0,
-          ),
-        ]).animate(
-          CurvedAnimation(
-            parent: _exitController,
-            curve: const Interval(0.15, 0.95),
-          ),
-        );
-
-    // 4. Konten Utama (Child): Slide up lembut dari Offset(0, 0.06) ke Offset.zero & Fade-In berkesinambungan
+    // 3. Konten Utama (Child): Slide up lembut dari Offset(0, 0.06) ke Offset.zero & Fade-In berkesinambungan
     _childSlideAnimation =
         Tween<Offset>(begin: const Offset(0.0, 0.06), end: Offset.zero).animate(
           CurvedAnimation(
@@ -269,9 +242,8 @@ class _AsciiPreloaderState extends State<AsciiPreloader>
 
   @override
   Widget build(BuildContext context) {
-    final bgColor =
-        widget.backgroundColor ?? const Color.fromARGB(255, 195, 210, 255);
-    final txtColor = widget.textColor ?? Utils.primary;
+    final bgColor = widget.backgroundColor ?? Utils.neoCream;
+    final txtColor = widget.textColor ?? Utils.neoBlack;
 
     // Overlay tirai preloader yang melakukan slide-up ke atas
     final preloaderOverlay = SlideTransition(
@@ -296,16 +268,10 @@ class _AsciiPreloaderState extends State<AsciiPreloader>
                       style: TextStyle(
                         fontFamily: 'monospace',
                         fontSize: widget.fontSize,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                         letterSpacing: widget.letterSpacing,
                         color: txtColor,
                         decoration: TextDecoration.none,
-                        shadows: [
-                          Shadow(
-                            color: txtColor.withValues(alpha: 0.5),
-                            blurRadius: 10.0,
-                          ),
-                        ],
                       ),
                     );
                   },
@@ -313,26 +279,13 @@ class _AsciiPreloaderState extends State<AsciiPreloader>
               ),
             ),
           ),
-
-          // Lengkungan bawah tirai (Bottom curve saat ditarik ke atas)
+          // Straight bottom border 3px solid black
           Positioned(
             left: 0,
             right: 0,
-            bottom: -140.0,
-            height: 140.0,
-            child: AnimatedBuilder(
-              animation: _curveAnimation,
-              builder: (context, _) {
-                final double currentCurveHeight = _curveAnimation.value * 140.0;
-                return CustomPaint(
-                  size: const Size(double.infinity, 140.0),
-                  painter: _CurvedBottomCurtainPainter(
-                    color: bgColor,
-                    curveHeight: currentCurveHeight,
-                  ),
-                );
-              },
-            ),
+            bottom: 0,
+            height: 3.0,
+            child: Container(color: Utils.neoBlack),
           ),
         ],
       ),
@@ -362,38 +315,5 @@ class _AsciiPreloaderState extends State<AsciiPreloader>
     }
 
     return _isFinished ? const SizedBox.shrink() : preloaderOverlay;
-  }
-}
-
-/// CustomPainter untuk menggambar lengkungan di bawah tirai saat ditarik meluncur ke atas
-class _CurvedBottomCurtainPainter extends CustomPainter {
-  final Color color;
-  final double curveHeight;
-
-  const _CurvedBottomCurtainPainter({
-    required this.color,
-    required this.curveHeight,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (curveHeight <= 0.1) return;
-
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-
-    final path = Path()
-      ..moveTo(0, 0)
-      ..lineTo(size.width, 0)
-      ..quadraticBezierTo(size.width * 0.5, curveHeight, 0, 0)
-      ..close();
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _CurvedBottomCurtainPainter oldDelegate) {
-    return oldDelegate.color != color || oldDelegate.curveHeight != curveHeight;
   }
 }

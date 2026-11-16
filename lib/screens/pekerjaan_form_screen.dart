@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:kita_kerja/controllers/auth_controller.dart';
 import 'package:kita_kerja/controllers/task_controller.dart';
 import 'package:kita_kerja/layouts/main_layout.dart';
-import 'package:kita_kerja/lib/utils.dart';
+import 'package:kita_kerja/core/utils/utils.dart';
 import 'package:kita_kerja/models/employee_model.dart';
 import 'package:kita_kerja/models/task_model.dart';
 import 'package:kita_kerja/repositories/employee_repository.dart';
@@ -22,7 +23,6 @@ class PekerjaanFormScreen extends StatefulWidget {
 
 class _PekerjaanFormScreenState extends State<PekerjaanFormScreen> {
   final _formKey = GlobalKey<FormState>();
-
 
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
@@ -98,16 +98,13 @@ class _PekerjaanFormScreenState extends State<PekerjaanFormScreen> {
     final masterRepo = MasterDataRepository();
     final categories = (await masterRepo.getJobCategories()).map((e) => e.toMap()).toList();
     final empRepo = EmployeeRepository();
-    final employeesRes = await empRepo.getEmployees(
-      status: 'active',
-      pageSize: 100,
-    );
-    final employeesList = (employeesRes['data'] as List<EmployeeModel>).map((e) => e.toMap()).toList();
+    final empResult = await empRepo.getEmployees(status: 'active', pageSize: 100);
+    final employees = (empResult['data'] as List<EmployeeModel>).map((e) => e.toMap()).toList();
 
     if (!mounted) return;
     setState(() {
       _categories = categories;
-      _employees = employeesList;
+      _employees = employees;
 
       if (!isEdit) {
         if (_categories.isNotEmpty) {
@@ -115,22 +112,6 @@ class _PekerjaanFormScreenState extends State<PekerjaanFormScreen> {
         }
         if (_employees.isNotEmpty) {
           _selectedAssignedTo = _employees.first['id'] as int;
-        }
-      } else {
-        // Handle case where category_id or assigned_to was not explicitly passed
-        if (_selectedCategoryId == null && _categories.isNotEmpty) {
-          final found = _categories.firstWhere(
-            (c) => c['name'] == widget.taskToEdit?['category_name'],
-            orElse: () => _categories.first,
-          );
-          _selectedCategoryId = found['id'] as int;
-        }
-        if (_selectedAssignedTo == null && _employees.isNotEmpty) {
-          final found = _employees.firstWhere(
-            (e) => e['full_name'] == widget.taskToEdit?['assigned_to_name'],
-            orElse: () => _employees.first,
-          );
-          _selectedAssignedTo = found['id'] as int;
         }
       }
       _isLoadingDropdowns = false;
@@ -148,55 +129,15 @@ class _PekerjaanFormScreenState extends State<PekerjaanFormScreen> {
     super.dispose();
   }
 
-  Future<void> _selectDate(TextEditingController controller) async {
-    DateTime initial = DateTime.tryParse(controller.text) ?? DateTime.now();
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: initial,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2035),
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Utils.primary,
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: Utils.border,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (picked != null) {
-      setState(() {
-        controller.text =
-            '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
-      });
-    }
-  }
-
   void _handleSave() async {
     if (_formKey.currentState?.validate() ?? false) {
-      if (_selectedCategoryId == null) {
+      if (_selectedCategoryId == null || _selectedAssignedTo == null) {
         Utils.toast(
           context,
-          'Pilih kategori pekerjaan terlebih dahulu',
-          ToastificationType.error,
-          Icons.close,
-          Utils.danger,
-        );
-        return;
-      }
-
-      if (_selectedAssignedTo == null) {
-        Utils.toast(
-          context,
-          'Pilih penanggung jawab (karyawan aktif) terlebih dahulu',
-          ToastificationType.error,
-          Icons.close,
-          Utils.danger,
+          'Harap pilih kategori dan penanggung jawab pekerjaan.',
+          ToastificationType.warning,
+          Icons.warning,
+          Utils.neoYellow,
         );
         return;
       }
@@ -241,10 +182,10 @@ class _PekerjaanFormScreenState extends State<PekerjaanFormScreen> {
           context,
           isEdit
               ? 'Pekerjaan berhasil diperbarui!'
-              : 'Pekerjaan baru berhasil dibuat & ditugaskan!',
+              : 'Pekerjaan baru berhasil dibuat!',
           ToastificationType.success,
           Icons.check,
-          Utils.success,
+          Utils.neoGreen,
         );
 
         Navigator.pop(context, true);
@@ -252,666 +193,232 @@ class _PekerjaanFormScreenState extends State<PekerjaanFormScreen> {
         if (!mounted) return;
         setState(() => _isSaving = false);
 
-        String errStr = err.toString();
-        String errorMessage = 'Gagal menyimpan pekerjaan: $errStr';
-
         Utils.toast(
           context,
-          errorMessage,
+          'Gagal menyimpan pekerjaan: $err',
           ToastificationType.error,
           Icons.close,
-          Utils.danger,
+          Utils.neoRed,
         );
       }
     }
   }
 
+  InputDecoration _dropdownDecoration() {
+    return const InputDecoration(
+      filled: true,
+      fillColor: Utils.neoCream,
+      contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.zero,
+        borderSide: Utils.borderSideW,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.zero,
+        borderSide: Utils.borderSideW,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.zero,
+        borderSide: Utils.borderSideW,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return MainLayout(
-      title: isEdit ? 'Edit Pekerjaan' : 'Tambah Pekerjaan Baru',
+      title: isEdit ? 'Edit Pekerjaan' : 'Tambah Pekerjaan',
       activeMenu: 'pekerjaan',
       child: _isLoadingDropdowns
-          ? const Center(child: CircularProgressIndicator(color: Utils.primary))
+          ? const Center(child: CircularProgressIndicator(color: Utils.neoBlack))
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(32),
               child: Center(
                 child: Container(
                   constraints: const BoxConstraints(maxWidth: 800),
-                  padding: const EdgeInsets.all(28),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Utils.border, width: 2),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Utils.border,
-                        offset: Offset(4, 4),
-                        blurRadius: 0,
-                      ),
-                    ],
+                  padding: const EdgeInsets.all(32),
+                  decoration: const BoxDecoration(
+                    color: Utils.neoCream,
+                    borderRadius: BorderRadius.zero,
+                    border: Utils.borderW,
+                    boxShadow: Utils.shadowLg,
                   ),
                   child: Form(
                     key: _formKey,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Header Navigation Row
+                        // Header
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            OutlinedButton.icon(
-                              onPressed: () => Navigator.pop(context),
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(
-                                  color: Utils.border,
-                                  width: 2,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                              ),
-                              icon: const Icon(
-                                Icons.arrow_back,
-                                size: 16,
-                                color: Utils.border,
-                              ),
-                              label: const Text(
-                                'Kembali',
-                                style: TextStyle(
-                                  color: Utils.border,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            Text(
+                              isEdit ? 'UBAH PEKERJAAN' : 'BUAT PEKERJAAN BARU',
+                              style: GoogleFonts.spaceGrotesk(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w700,
+                                color: Utils.neoBlack,
                               ),
                             ),
-                            const SizedBox(width: 16),
-                            Text(
-                              isEdit
-                                  ? 'Form Sunting Pekerjaan / Tugas'
-                                  : 'Form Buat Pekerjaan Baru',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                                color: Utils.border,
-                              ),
+                            NeoButton(
+                              text: 'Kembali',
+                              size: NeoButtonSize.sm,
+                              variant: NeoButtonVariant.neutral,
+                              onPressed: () => Navigator.pop(context),
                             ),
                           ],
                         ),
-                        Utils.smallSpace,
-                        const Divider(color: Color(0xFFEEEEEE), height: 1),
+                        const SizedBox(height: 16),
+                        const Divider(color: Utils.neoBlack, thickness: 2, height: 2),
                         const SizedBox(height: 24),
 
-                        // Section 1: Informasi Tugas
-                        const Text(
-                          'RINCIAN TUGAS & PENUGASAN',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            color: Utils.primary,
-                            letterSpacing: 0.8,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
+                        // Judul & Deskripsi
                         NeoTextField(
-                          label: 'Judul Pekerjaan / Tugas',
-                          placeholder: 'misal: Input data penjualan harian',
+                          label: 'Judul Pekerjaan / Tugas*',
+                          placeholder: 'Misal: Perbaiki bug halaman login',
                           controller: _titleController,
-                          validator: (val) {
-                            if (val == null || val.trim().isEmpty) {
-                              return 'Judul pekerjaan wajib diisi';
-                            }
-                            return null;
-                          },
+                          validator: (val) => val == null || val.trim().isEmpty ? 'Judul pekerjaan wajib diisi' : null,
                         ),
                         const SizedBox(height: 16),
+                        NeoTextField(
+                          label: 'Deskripsi Detail Pekerjaan',
+                          placeholder: 'Rincian tugas yang perlu diselesaikan...',
+                          controller: _descriptionController,
+                          maxLines: 3,
+                        ),
+                        const SizedBox(height: 20),
 
-                        // Dropdown Kategori & Penanggung Jawab
+                        // Kategori & Penanggung Jawab
                         Row(
                           children: [
-                            // Kategori Pekerjaan
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    'KATEGORI PEKERJAAN',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: Utils.border,
-                                    ),
+                                  Text(
+                                    'KATEGORI PEKERJAAN*',
+                                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: Utils.neoBlack, letterSpacing: 0.5),
                                   ),
                                   const SizedBox(height: 6),
                                   DropdownButtonFormField<int>(
                                     initialValue: _selectedCategoryId,
-                                    decoration: InputDecoration(
-                                      filled: true,
-                                      fillColor: Colors.white,
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 10,
-                                          ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: const BorderSide(
-                                          color: Utils.border,
-                                          width: 2,
-                                        ),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: const BorderSide(
-                                          color: Utils.border,
-                                          width: 2,
-                                        ),
-                                      ),
-                                    ),
-                                    items: _categories.map((c) {
-                                      return DropdownMenuItem<int>(
-                                        value: c['id'] as int,
-                                        child: Text(
-                                          c['name'].toString(),
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: Utils.border,
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
-                                    onChanged: (val) => setState(
-                                      () => _selectedCategoryId = val,
-                                    ),
+                                    dropdownColor: Utils.neoCream,
+                                    decoration: _dropdownDecoration(),
+                                    items: _categories.map((c) => DropdownMenuItem<int>(value: c['id'] as int, child: Text(c['name'].toString()))).toList(),
+                                    onChanged: (val) => setState(() => _selectedCategoryId = val),
                                   ),
                                 ],
                               ),
                             ),
                             const SizedBox(width: 16),
-                            // Penanggung Jawab (Karyawan)
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    'PENANGGUNG JAWAB (KARYAWAN)',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: Utils.border,
-                                    ),
+                                  Text(
+                                    'PENANGGUNG JAWAB (KARYAWAN)*',
+                                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: Utils.neoBlack, letterSpacing: 0.5),
                                   ),
                                   const SizedBox(height: 6),
                                   DropdownButtonFormField<int>(
                                     initialValue: _selectedAssignedTo,
-                                    decoration: InputDecoration(
-                                      filled: true,
-                                      fillColor: Colors.white,
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 10,
-                                          ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: const BorderSide(
-                                          color: Utils.border,
-                                          width: 2,
-                                        ),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: const BorderSide(
-                                          color: Utils.border,
-                                          width: 2,
-                                        ),
-                                      ),
-                                    ),
-                                    items: _employees.map((e) {
-                                      return DropdownMenuItem<int>(
-                                        value: e['id'] as int,
-                                        child: Text(
-                                          '${e['full_name']} (${e['employee_code'] ?? 'Karyawan'})',
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: Utils.border,
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
-                                    onChanged: (val) => setState(
-                                      () => _selectedAssignedTo = val,
-                                    ),
+                                    dropdownColor: Utils.neoCream,
+                                    decoration: _dropdownDecoration(),
+                                    items: _employees.map((e) => DropdownMenuItem<int>(
+                                      value: e['id'] as int,
+                                      child: Text('${e['full_name']} (${e['employee_code']})'),
+                                    )).toList(),
+                                    onChanged: (val) => setState(() => _selectedAssignedTo = val),
                                   ),
                                 ],
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 20),
 
-                        // Prioritas & Status
+                        // Prioritas Pekerjaan (Radio 4 pilihan)
+                        Text(
+                          'PRIORITAS TUGAS*',
+                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: Utils.neoBlack, letterSpacing: 0.5),
+                        ),
+                        const SizedBox(height: 10),
                         Row(
                           children: [
-                            // Prioritas
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'PRIORITAS',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: Utils.border,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  DropdownButtonFormField<String>(
-                                    initialValue: _priority,
-                                    decoration: InputDecoration(
-                                      filled: true,
-                                      fillColor: Colors.white,
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 10,
-                                          ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: const BorderSide(
-                                          color: Utils.border,
-                                          width: 2,
-                                        ),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: const BorderSide(
-                                          color: Utils.border,
-                                          width: 2,
-                                        ),
-                                      ),
-                                    ),
-                                    items: const [
-                                      DropdownMenuItem(
-                                        value: 'low',
-                                        child: Text(
-                                          'Rendah (Low)',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                      DropdownMenuItem(
-                                        value: 'medium',
-                                        child: Text(
-                                          'Sedang (Medium)',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                      DropdownMenuItem(
-                                        value: 'high',
-                                        child: Text(
-                                          'Tinggi (High)',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                      DropdownMenuItem(
-                                        value: 'urgent',
-                                        child: Text(
-                                          'Mendesak (Urgent)',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                            color: Utils.danger,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                     onChanged: (val) {
-                                       if (val != null) {
-                                         setState(() => _priority = val);
-                                       }
-                                     },
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            // Status Pekerjaan
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'STATUS PEKERJAAN',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: Utils.border,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  DropdownButtonFormField<String>(
-                                    initialValue: _status,
-                                    decoration: InputDecoration(
-                                      filled: true,
-                                      fillColor: Colors.white,
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 10,
-                                          ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: const BorderSide(
-                                          color: Utils.border,
-                                          width: 2,
-                                        ),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: const BorderSide(
-                                          color: Utils.border,
-                                          width: 2,
-                                        ),
-                                      ),
-                                    ),
-                                    items: const [
-                                      DropdownMenuItem(
-                                        value: 'not_started',
-                                        child: Text(
-                                          'Belum Mulai',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                      DropdownMenuItem(
-                                        value: 'in_progress',
-                                        child: Text(
-                                          'Sedang Dikerjakan',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                      DropdownMenuItem(
-                                        value: 'review',
-                                        child: Text(
-                                          'Ditinjau (Review)',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                      DropdownMenuItem(
-                                        value: 'completed',
-                                        child: Text(
-                                          'Selesai (Completed)',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                            color: Utils.success,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                     onChanged: (val) {
-                                       if (val != null) {
-                                         setState(() => _status = val);
-                                       }
-                                     },
-                                  ),
-                                ],
-                              ),
-                            ),
+                            _buildPriorityOption('low', 'RENDAH'),
+                            const SizedBox(width: 12),
+                            _buildPriorityOption('medium', 'SEDANG'),
+                            const SizedBox(width: 12),
+                            _buildPriorityOption('high', 'TINGGI'),
+                            const SizedBox(width: 12),
+                            _buildPriorityOption('urgent', 'URGENT'),
                           ],
                         ),
+                        const SizedBox(height: 20),
 
-                        const SizedBox(height: 24),
-                        const Divider(color: Color(0xFFEEEEEE), height: 1),
-                        const SizedBox(height: 24),
-
-                        // Section 2: Estimasi Jam & Jadwal
-                        const Text(
-                          'ESTIMASI BEBAN & WAKTU PELAKSANAAN',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            color: Utils.primary,
-                            letterSpacing: 0.8,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
+                        // Estimasi & Jam Aktual
                         Row(
                           children: [
                             Expanded(
                               child: NeoTextField(
-                                label: 'Estimasi Jam Kerja',
-                                placeholder: 'misal: 8.0',
+                                label: 'Estimasi Jam Kerja*',
+                                placeholder: '8.0',
                                 controller: _estimatedHoursController,
-                                keyboardType:
-                                    const TextInputType.numberWithOptions(
-                                      decimal: true,
-                                    ),
-                                validator: (val) {
-                                  if (val == null || val.trim().isEmpty) {
-                                    return 'Estimasi jam wajib diisi';
-                                  }
-                                  if (double.tryParse(val.trim()) == null) {
-                                    return 'Gunakan angka (misal: 8.0)';
-                                  }
-                                  return null;
-                                },
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                validator: (val) => val == null || val.trim().isEmpty ? 'Wajib diisi' : null,
                               ),
                             ),
                             const SizedBox(width: 16),
                             Expanded(
                               child: NeoTextField(
-                                label: 'Realisasi Jam Kerja (Actual)',
-                                placeholder: 'misal: 4.0',
+                                label: 'Jam Aktual Terpakai',
+                                placeholder: '0.0',
                                 controller: _actualHoursController,
-                                keyboardType:
-                                    const TextInputType.numberWithOptions(
-                                      decimal: true,
-                                    ),
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 16),
+
+                        // Tanggal Mulai & Deadline
                         Row(
                           children: [
-                            // Start Date Picker
                             Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'TANGGAL MULAI',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: Utils.border,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  TextFormField(
-                                    controller: _startDateController,
-                                    readOnly: true,
-                                    onTap: () =>
-                                        _selectDate(_startDateController),
-                                    decoration: InputDecoration(
-                                      suffixIcon: const Icon(
-                                        Icons.calendar_today,
-                                        size: 18,
-                                        color: Utils.border,
-                                      ),
-                                      filled: true,
-                                      fillColor: Colors.white,
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 10,
-                                          ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: const BorderSide(
-                                          color: Utils.border,
-                                          width: 2,
-                                        ),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: const BorderSide(
-                                          color: Utils.border,
-                                          width: 2,
-                                        ),
-                                      ),
-                                    ),
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: Utils.border,
-                                    ),
-                                  ),
-                                ],
+                              child: NeoTextField(
+                                label: 'Tanggal Mulai (YYYY-MM-DD)',
+                                placeholder: '2026-11-16',
+                                controller: _startDateController,
                               ),
                             ),
                             const SizedBox(width: 16),
-                            // Deadline Date Picker
                             Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'DEADLINE / TENGGAT WAKTU',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: Utils.border,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  TextFormField(
-                                    controller: _deadlineController,
-                                    readOnly: true,
-                                    onTap: () =>
-                                        _selectDate(_deadlineController),
-                                    validator: (val) {
-                                      if (val == null || val.trim().isEmpty) {
-                                        return 'Deadline wajib diisi';
-                                      }
-                                      return null;
-                                    },
-                                    decoration: InputDecoration(
-                                      suffixIcon: const Icon(
-                                        Icons.event_busy,
-                                        size: 18,
-                                        color: Utils.danger,
-                                      ),
-                                      filled: true,
-                                      fillColor: Colors.white,
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 10,
-                                          ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: const BorderSide(
-                                          color: Utils.border,
-                                          width: 2,
-                                        ),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: const BorderSide(
-                                          color: Utils.border,
-                                          width: 2,
-                                        ),
-                                      ),
-                                    ),
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: Utils.border,
-                                    ),
-                                  ),
-                                ],
+                              child: NeoTextField(
+                                label: 'Deadline Selesai (YYYY-MM-DD)*',
+                                placeholder: '2026-11-20',
+                                controller: _deadlineController,
+                                validator: (val) => val == null || val.trim().isEmpty ? 'Deadline wajib diisi' : null,
                               ),
                             ),
                           ],
                         ),
+                        const SizedBox(height: 32),
 
-                        const SizedBox(height: 24),
-                        const Divider(color: Color(0xFFEEEEEE), height: 1),
-                        const SizedBox(height: 24),
-
-                        // Section 3: Deskripsi & Instruksi
-                        const Text(
-                          'DESKRIPSI & INSTRUKSI TUGAS',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            color: Utils.primary,
-                            letterSpacing: 0.8,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        NeoTextField(
-                          label: 'Deskripsi Rincian Tugas (Opsional)',
-                          placeholder: 'Jelaskan instruksi atau catatan khusus untuk karyawan...',
-                          controller: _descriptionController,
-                          maxLines: 4,
-                        ),
-
-                        const SizedBox(height: 28),
-                        // Submit & Action Buttons
+                        // Footer Buttons
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
-                            OutlinedButton(
+                            NeoButton(
+                              text: 'Batal',
+                              variant: NeoButtonVariant.neutral,
                               onPressed: () => Navigator.pop(context),
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(
-                                  color: Utils.border,
-                                  width: 2,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                  vertical: 20,
-                                ),
-                              ),
-                              child: const Text(
-                                'Batal',
-                                style: TextStyle(
-                                  color: Utils.border,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
                             ),
-                            const SizedBox(width: 16),
-                            SizedBox(
-                              width: 220,
-                              height: 48,
-                              child: NeoButton(
-                                text: isEdit
-                                    ? 'Simpan Perubahan'
-                                    : 'Buat Pekerjaan',
-                                isLoading: _isSaving,
-                                onPressed: _handleSave,
-                              ),
+                            const SizedBox(width: 14),
+                            NeoButton(
+                              text: isEdit ? 'Simpan Perubahan' : 'Buat Pekerjaan',
+                              variant: NeoButtonVariant.primary,
+                              isLoading: _isSaving,
+                              onPressed: _handleSave,
                             ),
                           ],
                         ),
@@ -921,6 +428,35 @@ class _PekerjaanFormScreenState extends State<PekerjaanFormScreen> {
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _buildPriorityOption(String val, String label) {
+    final isSelected = _priority.toLowerCase() == val.toLowerCase();
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () => setState(() => _priority = val),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? Utils.neoYellow : Utils.neoCream,
+            borderRadius: BorderRadius.zero,
+            border: Utils.borderW,
+            boxShadow: isSelected ? Utils.shadowMd : Utils.shadowNone,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              NeoBadge.taskPriority(val),
+              if (isSelected) ...[
+                const SizedBox(width: 8),
+                const Icon(Icons.check, size: 16, color: Utils.neoBlack),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
