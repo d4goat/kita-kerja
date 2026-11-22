@@ -1,6 +1,7 @@
 import 'package:kita_kerja/core/utils/utils.dart';
 import 'package:kita_kerja/core/database/koneksi.dart';
 import 'package:kita_kerja/models/attendance_model.dart';
+import 'package:kita_kerja/models/master_data_model.dart';
 
 class AttendanceRepository {
   // In-memory cache for offline demo / testing
@@ -196,16 +197,107 @@ class AttendanceRepository {
     }
   }
 
+  Future<WorkScheduleModel?> getEmployeeSchedule(int employeeId) async {
+    try {
+      var connection = await DatabaseConnection.getConnection();
+      try {
+        var results = await connection.execute(
+          '''
+          SELECT ws.id, ws.name, ws.start_time, ws.end_time, ws.break_minutes, ws.working_hours, ws.status
+          FROM employees e
+          INNER JOIN work_schedules ws ON e.work_schedule_id = ws.id
+          WHERE e.id = :emp_id
+          LIMIT 1
+          ''',
+          {'emp_id': employeeId},
+        );
+        if (results.rows.isNotEmpty) {
+          return WorkScheduleModel.fromMap(results.rows.first.assoc());
+        }
+        return null;
+      } finally {
+        await connection.close();
+      }
+    } catch (err) {
+      Utils.logger.w('Fallback getEmployeeSchedule: $err');
+      if (employeeId == 4) {
+        return WorkScheduleModel(
+          id: 2,
+          name: 'Shift Pagi',
+          startTime: '07:00:00',
+          endTime: '15:00:00',
+          breakMinutes: 60,
+          workingHours: 7.0,
+        );
+      }
+      return WorkScheduleModel(
+        id: 1,
+        name: 'Jam Kerja Normal',
+        startTime: '08:00:00',
+        endTime: '17:00:00',
+        breakMinutes: 60,
+        workingHours: 8.0,
+      );
+    }
+  }
+
+  Future<WorkScheduleModel?> getScheduleByAttendanceId(int attendanceId) async {
+    try {
+      var connection = await DatabaseConnection.getConnection();
+      try {
+        var results = await connection.execute(
+          '''
+          SELECT ws.id, ws.name, ws.start_time, ws.end_time, ws.break_minutes, ws.working_hours, ws.status
+          FROM attendances a
+          INNER JOIN employees e ON a.employee_id = e.id
+          INNER JOIN work_schedules ws ON e.work_schedule_id = ws.id
+          WHERE a.id = :att_id
+          LIMIT 1
+          ''',
+          {'att_id': attendanceId},
+        );
+        if (results.rows.isNotEmpty) {
+          return WorkScheduleModel.fromMap(results.rows.first.assoc());
+        }
+        return null;
+      } finally {
+        await connection.close();
+      }
+    } catch (err) {
+      Utils.logger.w('Fallback getScheduleByAttendanceId: $err');
+      try {
+        final att = _fallbackAttendances.firstWhere((a) => a.id == attendanceId);
+        return getEmployeeSchedule(att.employeeId);
+      } catch (_) {
+        return getEmployeeSchedule(1);
+      }
+    }
+  }
+
   Future<bool> clockIn({required int employeeId, String? notes}) async {
     final now = DateTime.now();
     final todayStr = now.toIso8601String().split('T')[0];
     final nowStr =
         '${now.toIso8601String().split('T')[0]} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
 
-    // Status check: late if after 08:15 (standard)
-    String status = (now.hour > 8 || (now.hour == 8 && now.minute > 15))
-        ? 'late'
-        : 'present';
+    // Status check dinamis berdasarkan work_schedules dan toleransi keterlambatan 15 menit
+    final schedule = await getEmployeeSchedule(employeeId);
+    int scheduledStartHour = 8;
+    int scheduledStartMin = 0;
+    if (schedule != null && schedule.startTime.isNotEmpty) {
+      final parts = schedule.startTime.split(':');
+      if (parts.isNotEmpty) scheduledStartHour = int.tryParse(parts[0]) ?? 8;
+      if (parts.length > 1) scheduledStartMin = int.tryParse(parts[1]) ?? 0;
+    }
+
+    final totalScheduledStartMin = scheduledStartHour * 60 + scheduledStartMin;
+    final totalNowMin = now.hour * 60 + now.minute;
+    const toleranceMinutes = 15; // Batas toleransi keterlambatan standar
+
+    final bool isLate = totalNowMin > (totalScheduledStartMin + toleranceMinutes);
+    final String status = isLate ? 'late' : 'present';
+    final int lateMinutes = isLate ? (totalNowMin - totalScheduledStartMin) : 0;
+    final String defaultNotes = isLate ? 'Terlambat $lateMinutes menit' : 'Tepat Waktu';
 
     try {
       var connection = await DatabaseConnection.getConnection();
@@ -226,8 +318,7 @@ class AttendanceRepository {
             'attendance_date': todayStr,
             'clock_in': nowStr,
             'status': status,
-            'notes':
-                notes ?? (status == 'late' ? 'Terlambat masuk' : 'Tepat Waktu'),
+            'notes': notes ?? defaultNotes,
           },
         );
         return true;
@@ -236,7 +327,6 @@ class AttendanceRepository {
       }
     } catch (err) {
       Utils.logger.w('Fallback clockIn execution: $err');
-      // Update in-memory fallback cache
       final existingIndex = _fallbackAttendances.indexWhere(
         (a) => a.employeeId == employeeId && a.attendanceDate == todayStr,
       );
@@ -248,7 +338,7 @@ class AttendanceRepository {
             '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
         clockOut: '-',
         status: status,
-        notes: notes ?? (status == 'late' ? 'Terlambat' : 'Tepat Waktu'),
+        notes: notes ?? defaultNotes,
       );
       if (existingIndex >= 0) {
         _fallbackAttendances[existingIndex] = newRecord;
@@ -265,6 +355,11 @@ class AttendanceRepository {
     final nowStr =
         '${now.toIso8601String().split('T')[0]} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
 
+    // Ambil jadwal kerja karyawan untuk kalkulasi dinamis
+    final schedule = await getEmployeeSchedule(employeeId);
+    final breakMinutes = schedule?.breakMinutes ?? 60;
+    final standardWorkingMinutes = ((schedule?.workingHours ?? 8.0) * 60).round();
+
     try {
       var connection = await DatabaseConnection.getConnection();
       try {
@@ -278,24 +373,31 @@ class AttendanceRepository {
           {'employee_id': employeeId, 'att_date': todayStr},
         );
 
-        int workingMinutes = 480; // default 8 hours
+        int workingMinutes = standardWorkingMinutes;
         int overtimeMinutes = 0;
         if (currentRes.rows.isNotEmpty) {
           final cInStr = currentRes.rows.first.assoc()['clock_in'];
           if (cInStr != null && cInStr.isNotEmpty) {
             final parsedIn = DateTime.tryParse(cInStr);
             if (parsedIn != null) {
-              workingMinutes = now.difference(parsedIn).inMinutes;
-              if (workingMinutes > 480) {
-                overtimeMinutes = workingMinutes - 480;
+              final elapsed = now.difference(parsedIn).inMinutes;
+              workingMinutes = elapsed > breakMinutes ? (elapsed - breakMinutes) : elapsed;
+              if (workingMinutes < 0) workingMinutes = 0;
+              if (workingMinutes > standardWorkingMinutes) {
+                overtimeMinutes = workingMinutes - standardWorkingMinutes;
               }
             }
           }
         }
 
+        String? finalNotes = notes;
+        if ((finalNotes == null || finalNotes.isEmpty) && overtimeMinutes > 0) {
+          finalNotes = 'Lembur $overtimeMinutes menit';
+        }
+
         await connection.execute(
           '''
-          UPDATE attendances
+          UPDATE attendances 
           SET 
             clock_out = :clock_out,
             working_minutes = :working_minutes,
@@ -309,7 +411,7 @@ class AttendanceRepository {
             'clock_out': nowStr,
             'working_minutes': workingMinutes,
             'overtime_minutes': overtimeMinutes,
-            'notes': notes,
+            'notes': finalNotes,
           },
         );
         return true;
@@ -323,6 +425,27 @@ class AttendanceRepository {
       );
       if (existingIndex >= 0) {
         final prev = _fallbackAttendances[existingIndex];
+        int workingMinutes = standardWorkingMinutes;
+        int overtimeMinutes = 0;
+
+        if (prev.clockIn.isNotEmpty && prev.clockIn != '-') {
+          try {
+            final parts = prev.clockIn.split(':').map((e) => int.parse(e.trim())).toList();
+            final inTime = DateTime(now.year, now.month, now.day, parts[0], parts[1]);
+            final elapsed = now.difference(inTime).inMinutes;
+            workingMinutes = elapsed > breakMinutes ? (elapsed - breakMinutes) : elapsed;
+            if (workingMinutes < 0) workingMinutes = 0;
+            if (workingMinutes > standardWorkingMinutes) {
+              overtimeMinutes = workingMinutes - standardWorkingMinutes;
+            }
+          } catch (_) {}
+        }
+
+        String? finalNotes = notes ?? prev.notes;
+        if ((notes == null || notes.isEmpty) && overtimeMinutes > 0) {
+          finalNotes = 'Lembur $overtimeMinutes menit';
+        }
+
         _fallbackAttendances[existingIndex] = AttendanceModel(
           id: prev.id,
           employeeId: prev.employeeId,
@@ -333,10 +456,10 @@ class AttendanceRepository {
           clockIn: prev.clockIn,
           clockOut:
               '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
-          workingMinutes: 480,
-          overtimeMinutes: 0,
+          workingMinutes: workingMinutes,
+          overtimeMinutes: overtimeMinutes,
           status: prev.status,
-          notes: notes ?? prev.notes,
+          notes: finalNotes,
         );
       }
       return true;
@@ -351,6 +474,11 @@ class AttendanceRepository {
     required String status,
     String? notes,
   }) async {
+    // Ambil jadwal kerja spesifik berdasarkan attendance id
+    final schedule = await getScheduleByAttendanceId(id);
+    final breakMinutes = schedule?.breakMinutes ?? 60;
+    final standardWorkingMinutes = ((schedule?.workingHours ?? 8.0) * 60).round();
+
     int workingMinutes = 0;
     int overtimeMinutes = 0;
 
@@ -363,9 +491,11 @@ class AttendanceRepository {
         final totalInMin = inParts[0] * 60 + inParts[1];
         final totalOutMin = outParts[0] * 60 + outParts[1];
         if (totalOutMin >= totalInMin) {
-          workingMinutes = totalOutMin - totalInMin;
-          if (workingMinutes > 480) {
-            overtimeMinutes = workingMinutes - 480;
+          final elapsed = totalOutMin - totalInMin;
+          workingMinutes = elapsed > breakMinutes ? (elapsed - breakMinutes) : elapsed;
+          if (workingMinutes < 0) workingMinutes = 0;
+          if (workingMinutes > standardWorkingMinutes) {
+            overtimeMinutes = workingMinutes - standardWorkingMinutes;
           }
         }
       } catch (_) {}

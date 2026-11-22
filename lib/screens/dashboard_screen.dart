@@ -5,8 +5,11 @@ import 'package:kita_kerja/controllers/dashboard_controller.dart';
 import 'package:kita_kerja/core/utils/utils.dart';
 import 'package:kita_kerja/layouts/main_layout.dart';
 import 'package:kita_kerja/models/dashboard_summary_model.dart';
+import 'package:kita_kerja/models/report_model.dart';
 import 'package:kita_kerja/widgets/neo_components.dart';
+import 'package:kita_kerja/widgets/neo_charts.dart';
 import 'package:provider/provider.dart';
+import 'package:toastification/toastification.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -16,6 +19,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  int _dashboardTab = 0; // 0: Ringkasan (Overview), 1: Pelaporan Data (Reporting)
   @override
   void initState() {
     super.initState();
@@ -437,6 +441,394 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  /// Fitur Pelaporan Data (Data Reporting) dengan 3 Jenis Chart (Bar, Line, Pie),
+  /// filter dinamis (departemen, periode, status), dan data grouping.
+  Widget _buildReportingDashboard(DashboardController controller, AuthController auth) {
+    final report = controller.reportData;
+    final filter = controller.reportFilter;
+    final summary = report?.summaryKPIs ?? {};
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 1. Toolbar Filter & Grouping Data Laporan
+        NeoContainer(
+          padding: const EdgeInsets.all(20),
+          boxShadow: Utils.shadowMd,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.tune, size: 20, color: Utils.neoBlack),
+                      const SizedBox(width: 8),
+                      Text(
+                        'FILTER & PENGELOMPOKAN DATA LAPORAN',
+                        style: GoogleFonts.spaceGrotesk(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: Utils.neoBlack,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                  NeoTag(label: 'Grouping: ${filter.groupByLabel}'),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Baris Kontrol Filter
+              Wrap(
+                spacing: 16,
+                runSpacing: 12,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  // Filter Departemen
+                  _buildFilterDropdown(
+                    label: 'Departemen',
+                    value: filter.department,
+                    items: const [
+                      DropdownMenuItem(value: 'all', child: Text('Semua Departemen')),
+                      DropdownMenuItem(value: 'Operasional', child: Text('Operasional')),
+                      DropdownMenuItem(value: 'Pemasaran', child: Text('Pemasaran')),
+                      DropdownMenuItem(value: 'Teknologi', child: Text('Teknologi')),
+                      DropdownMenuItem(value: 'Administrasi', child: Text('Administrasi')),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        controller.updateFilter(filter.copyWith(department: val), auth.currentUser);
+                      }
+                    },
+                  ),
+
+                  // Filter Periode Waktu
+                  _buildFilterDropdown(
+                    label: 'Rentang Waktu',
+                    value: filter.period,
+                    items: const [
+                      DropdownMenuItem(value: 'this_month', child: Text('Bulan Ini')),
+                      DropdownMenuItem(value: '30_days', child: Text('30 Hari Terakhir')),
+                      DropdownMenuItem(value: '7_days', child: Text('7 Hari Terakhir')),
+                      DropdownMenuItem(value: 'all', child: Text('Semua Waktu')),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        controller.updateFilter(filter.copyWith(period: val), auth.currentUser);
+                      }
+                    },
+                  ),
+
+                  // Filter Status Tugas
+                  _buildFilterDropdown(
+                    label: 'Status Pekerjaan',
+                    value: filter.status,
+                    items: const [
+                      DropdownMenuItem(value: 'all', child: Text('Semua Status')),
+                      DropdownMenuItem(value: 'active', child: Text('Aktif (Belum Selesai)')),
+                      DropdownMenuItem(value: 'completed', child: Text('Selesai (Completed)')),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        controller.updateFilter(filter.copyWith(status: val), auth.currentUser);
+                      }
+                    },
+                  ),
+
+                  // Pengelompokan Data (Data Grouping)
+                  _buildFilterDropdown(
+                    label: 'Kelompokkan (Grouping)',
+                    value: filter.groupBy,
+                    items: const [
+                      DropdownMenuItem(value: 'department', child: Text('Departemen Tim')),
+                      DropdownMenuItem(value: 'category', child: Text('Kategori Pekerjaan')),
+                      DropdownMenuItem(value: 'priority', child: Text('Prioritas Tugas')),
+                      DropdownMenuItem(value: 'status', child: Text('Status Pengerjaan')),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        controller.updateFilter(filter.copyWith(groupBy: val), auth.currentUser);
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+
+        // 2. Indikator Metrik Kunci Hasil Filter
+        Row(
+          children: [
+            NeoKPICard(
+              title: 'TOTAL PEKERJAAN',
+              value: '${summary['total_tasks'] ?? 0}',
+              caption: 'Berdasarkan filter aktif',
+              icon: Icons.assignment_outlined,
+              iconContainerColor: Utils.neoBlack,
+              iconColor: Utils.neoCream,
+            ),
+            const SizedBox(width: 16),
+            NeoKPICard(
+              title: 'TINGKAT SELESAI',
+              value: '${(summary['completion_rate'] as double? ?? 0.0).toStringAsFixed(1)}%',
+              caption: '${summary['completed_tasks'] ?? 0} tugas diselesaikan',
+              icon: Icons.check_circle_outline,
+              iconContainerColor: Utils.neoGreen,
+              iconColor: Utils.neoBlack,
+            ),
+            const SizedBox(width: 16),
+            NeoKPICard(
+              title: 'TOTAL JAM AKTUAL',
+              value: '${(summary['total_actual_hours'] as double? ?? 0.0).toStringAsFixed(0)}j',
+              caption: 'Estimasi: ${(summary['total_estimated_hours'] as double? ?? 0.0).toStringAsFixed(0)}j',
+              icon: Icons.timer,
+              iconContainerColor: Utils.neoBlue,
+              iconColor: Utils.neoCream,
+            ),
+            const SizedBox(width: 16),
+            NeoKPICard(
+              title: 'EFISIENSI WAKTU',
+              value: '${(summary['efficiency_ratio'] as double? ?? 100.0).toStringAsFixed(1)}%',
+              caption: 'Rasio aktual vs estimasi',
+              icon: Icons.speed,
+              iconContainerColor: Utils.neoYellow,
+              iconColor: Utils.neoBlack,
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+
+        // 3. Visualisasi 3 Jenis Chart
+        if (controller.isReportLoading || report == null) ...[
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(40),
+              child: CircularProgressIndicator(color: Utils.neoBlack),
+            ),
+          ),
+        ] else ...[
+          // Baris Visualisasi 1: Bar Chart (Grafik Batang) & Pie Chart (Grafik Lingkaran)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1. BAR CHART (Grafik Batang Neo-Brutalism)
+              Expanded(
+                flex: 7,
+                child: NeoBarChart(
+                  title: 'Beban Pekerjaan per ${filter.groupByLabel}',
+                  subtitle: 'Perbandingan total pekerjaan dan jumlah yang telah tuntas',
+                  items: report.barChartData,
+                  primaryLegend: 'Total Tugas',
+                  secondaryLegend: 'Tugas Selesai',
+                  primaryColor: Utils.neoBlue,
+                  secondaryColor: Utils.neoGreen,
+                  height: 280,
+                ),
+              ),
+              const SizedBox(width: 20),
+
+              // 2. PIE CHART (Grafik Lingkaran Donut Neo-Brutalism)
+              Expanded(
+                flex: 5,
+                child: NeoPieChart(
+                  title: 'Distribusi Status Pekerjaan',
+                  subtitle: 'Komposisi persentase tahapan pengerjaan tugas tim',
+                  slices: report.pieChartData,
+                  centerTitle: 'TUGAS',
+                  height: 280,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          // Baris Visualisasi 2: Line Chart (Grafik Garis / Tren)
+          // 3. LINE CHART (Grafik Garis Tren Kehadiran & Jam Kerja)
+          NeoLineChart(
+            title: 'Tren Kehadiran & Rata-rata Durasi Kerja Harian',
+            subtitle: 'Pemantauan fluktuasi jumlah kehadiran staf per hari dalam periode laporan',
+            points: report.lineChartData,
+            lineLabel: 'Jumlah Staf Hadir',
+            lineColor: Utils.neoBlue,
+            height: 260,
+            valueSuffix: ' org',
+          ),
+          const SizedBox(height: 24),
+
+          // 4. Tabel Rekapitulasi Data Laporan
+          NeoContainer(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'TABEL REKAPITULASI LAPORAN DATA',
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Utils.neoBlack,
+                      ),
+                    ),
+                    const NeoTag(label: 'DATA HASIL GROUPING'),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                NeoTable(
+                  isLoading: controller.isReportLoading,
+                  columnWidths: const {
+                    0: FlexColumnWidth(2.0),
+                    1: FlexColumnWidth(1.2),
+                    2: FlexColumnWidth(1.2),
+                    3: FlexColumnWidth(1.4),
+                    4: FlexColumnWidth(1.3),
+                    5: FlexColumnWidth(1.3),
+                    6: FlexColumnWidth(1.4),
+                  },
+                  headers: [
+                    NeoTableHeaderCell(filter.groupByLabel.toUpperCase()),
+                    const NeoTableHeaderCell('TOTAL TUGAS', alignment: Alignment.center),
+                    const NeoTableHeaderCell('SELESAI', alignment: Alignment.center),
+                    const NeoTableHeaderCell('BERJALAN', alignment: Alignment.center),
+                    const NeoTableHeaderCell('ESTIMASI JAM', alignment: Alignment.center),
+                    const NeoTableHeaderCell('AKTUAL JAM', alignment: Alignment.center),
+                    const NeoTableHeaderCell('TINGKAT SELESAI', alignment: Alignment.center),
+                  ],
+                  rows: report.tableData.map((row) {
+                    return [
+                      NeoTableCell(text: row.groupName),
+                      NeoTableCell(
+                        alignment: Alignment.center,
+                        child: Text(
+                          '${row.totalTasks}',
+                          style: GoogleFonts.spaceGrotesk(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: Utils.neoBlack,
+                          ),
+                        ),
+                      ),
+                      NeoTableCell(
+                        alignment: Alignment.center,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: const BoxDecoration(
+                            color: Utils.neoGreen,
+                            border: Utils.borderWSm,
+                          ),
+                          child: Text(
+                            '${row.completedTasks}',
+                            style: GoogleFonts.spaceGrotesk(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Utils.neoBlack,
+                            ),
+                          ),
+                        ),
+                      ),
+                      NeoTableCell(
+                        alignment: Alignment.center,
+                        child: Text(
+                          '${row.inProgressTasks}',
+                          style: GoogleFonts.spaceGrotesk(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Utils.neoBlack,
+                          ),
+                        ),
+                      ),
+                      NeoTableCell(
+                        alignment: Alignment.center,
+                        child: Text('${row.totalEstimatedHours.toStringAsFixed(1)}j'),
+                      ),
+                      NeoTableCell(
+                        alignment: Alignment.center,
+                        child: Text('${row.totalActualHours.toStringAsFixed(1)}j'),
+                      ),
+                      NeoTableCell(
+                        alignment: Alignment.center,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: row.completionRate >= 80
+                                ? Utils.neoGreen
+                                : (row.completionRate >= 40
+                                    ? Utils.neoYellow
+                                    : Utils.neoCream),
+                            border: Utils.borderWSm,
+                          ),
+                          child: Text(
+                            '${row.completionRate.toStringAsFixed(1)}%',
+                            style: GoogleFonts.spaceGrotesk(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: Utils.neoBlack,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ];
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildFilterDropdown({
+    required String label,
+    required String value,
+    required List<DropdownMenuItem<String>> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label.toUpperCase(),
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: Utils.neoBlack,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Container(
+          height: 42,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: const BoxDecoration(
+            color: Utils.neoCream,
+            border: Utils.borderW,
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: value,
+              dropdownColor: Utils.neoCream,
+              items: items,
+              onChanged: onChanged,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Utils.neoBlack,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthController>(context);
@@ -462,9 +854,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   onRefresh: () => controller.loadDashboard(auth.currentUser),
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(32),
-                    child: isEmployee
-                        ? _buildKaryawanPersonalDashboard(data, auth)
-                        : _buildAdminDashboard(data),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Tab Navigasi Dashboard: RINGKASAN vs PELAPORAN DATA (REPORTING)
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            NeoTabs(
+                              tabs: const ['RINGKASAN', 'PELAPORAN DATA (REPORTING)'],
+                              selectedIndex: _dashboardTab,
+                              onTabSelected: (idx) => setState(() => _dashboardTab = idx),
+                            ),
+                            if (_dashboardTab == 1)
+                              NeoButton(
+                                text: 'Ekspor Laporan',
+                                variant: NeoButtonVariant.primary,
+                                icon: const Icon(Icons.download, size: 18),
+                                onPressed: () {
+                                  Utils.toast(
+                                    context,
+                                    'Laporan analitik data berhasil diekspor!',
+                                    ToastificationType.success,
+                                    Icons.check,
+                                    Utils.neoGreen,
+                                  );
+                                },
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Konten Sesuai Tab Terpilih
+                        if (_dashboardTab == 0) ...[
+                          isEmployee
+                              ? _buildKaryawanPersonalDashboard(data, auth)
+                              : _buildAdminDashboard(data),
+                        ] else ...[
+                          _buildReportingDashboard(controller, auth),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
         );

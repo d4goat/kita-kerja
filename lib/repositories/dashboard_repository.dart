@@ -1,6 +1,8 @@
+import 'package:flutter/material.dart';
 import 'package:kita_kerja/core/utils/utils.dart';
 import 'package:kita_kerja/core/database/koneksi.dart';
 import 'package:kita_kerja/models/dashboard_summary_model.dart';
+import 'package:kita_kerja/models/report_model.dart';
 
 class DashboardRepository {
   Future<DashboardSummaryModel> getAdminDashboardData() async {
@@ -432,6 +434,455 @@ class DashboardRepository {
           'category_name': 'Teknologi',
         },
       ],
+    );
+  }
+
+  /// Mengambil data pelaporan analitik dari database MySQL menggunakan query agregasi
+  /// dengan kemampuan data filtering (periode, departemen, status) dan data grouping.
+  Future<DashboardReportData> getReportData(
+    ReportFilter filter, {
+    int? supervisorId,
+    int? employeeId,
+  }) async {
+    try {
+      var connection = await DatabaseConnection.getConnection();
+      try {
+        // 1. Siapkan Filter Kondisi SQL
+        final taskConditions = <String>[];
+        final taskParams = <String, dynamic>{};
+
+        if (filter.department != 'all') {
+          taskConditions.add('d.name = :dept_name');
+          taskParams['dept_name'] = filter.department;
+        }
+
+        if (filter.status == 'active') {
+          taskConditions.add("t.status IN ('not_started', 'in_progress', 'review')");
+        } else if (filter.status == 'completed') {
+          taskConditions.add("t.status = 'completed'");
+        }
+
+        if (employeeId != null) {
+          taskConditions.add('t.assigned_to = :emp_id');
+          taskParams['emp_id'] = employeeId;
+        } else if (supervisorId != null) {
+          taskConditions.add(
+            '(es.supervisor_id = :sup_id OR t.assigned_to = :sup_id OR t.created_by = :sup_id)',
+          );
+          taskParams['sup_id'] = supervisorId;
+        }
+
+        String taskWhereClause = taskConditions.isNotEmpty
+            ? 'WHERE ${taskConditions.join(" AND ")}'
+            : '';
+
+        String joinSupervisor = (supervisorId != null)
+            ? 'LEFT JOIN employee_supervisors es ON t.assigned_to = es.employee_id'
+            : '';
+
+        // 2. Query Bar Chart Berdasarkan Data Grouping
+        String groupColumn;
+        String groupSelect;
+        String fromTable;
+
+        switch (filter.groupBy) {
+          case 'category':
+            groupSelect = 'jc.name';
+            groupColumn = 'jc.name';
+            fromTable = '''
+              tasks t
+              INNER JOIN employees e ON t.assigned_to = e.id
+              INNER JOIN job_categories jc ON t.category_id = jc.id
+              LEFT JOIN departments d ON e.department_id = d.id
+              $joinSupervisor
+            ''';
+            break;
+          case 'priority':
+            groupSelect = 't.priority';
+            groupColumn = 't.priority';
+            fromTable = '''
+              tasks t
+              INNER JOIN employees e ON t.assigned_to = e.id
+              LEFT JOIN departments d ON e.department_id = d.id
+              $joinSupervisor
+            ''';
+            break;
+          case 'status':
+            groupSelect = 't.status';
+            groupColumn = 't.status';
+            fromTable = '''
+              tasks t
+              INNER JOIN employees e ON t.assigned_to = e.id
+              LEFT JOIN departments d ON e.department_id = d.id
+              $joinSupervisor
+            ''';
+            break;
+          case 'department':
+          default:
+            groupSelect = 'd.name';
+            groupColumn = 'd.name';
+            fromTable = '''
+              tasks t
+              INNER JOIN employees e ON t.assigned_to = e.id
+              INNER JOIN departments d ON e.department_id = d.id
+              $joinSupervisor
+            ''';
+            break;
+        }
+
+        final barQuery = '''
+          SELECT 
+            $groupSelect AS group_label,
+            COUNT(t.id) AS total_count,
+            COUNT(CASE WHEN t.status = 'completed' THEN 1 END) AS completed_count,
+            COUNT(CASE WHEN t.status IN ('in_progress', 'review') THEN 1 END) AS in_progress_count,
+            COALESCE(SUM(t.estimated_hours), 0) AS total_estimated_hours,
+            COALESCE(SUM(t.actual_hours), 0) AS total_actual_hours
+          FROM $fromTable
+          $taskWhereClause
+          GROUP BY $groupColumn
+          ORDER BY total_count DESC
+        ''';
+
+        final barResults = await connection.execute(barQuery, taskParams);
+
+        final barChartData = <BarChartItem>[];
+        final tableData = <ReportTableRowData>[];
+
+        int totalTasksAll = 0;
+        int completedTasksAll = 0;
+        double totalEstHoursAll = 0;
+        double totalActHoursAll = 0;
+
+        for (var row in barResults.rows) {
+          final data = row.assoc();
+          final label = data['group_label']?.toString() ?? '-';
+          final total = int.tryParse(data['total_count'] ?? '') ?? 0;
+          final completed = int.tryParse(data['completed_count'] ?? '') ?? 0;
+          final inProg = int.tryParse(data['in_progress_count'] ?? '') ?? 0;
+          final estH = double.tryParse(data['total_estimated_hours'] ?? '') ?? 0.0;
+          final actH = double.tryParse(data['total_actual_hours'] ?? '') ?? 0.0;
+          final rate = total > 0 ? (completed / total) * 100.0 : 0.0;
+
+          totalTasksAll += total;
+          completedTasksAll += completed;
+          totalEstHoursAll += estH;
+          totalActHoursAll += actH;
+
+          barChartData.add(BarChartItem(
+            label: _formatGroupLabel(label, filter.groupBy),
+            primaryValue: total.toDouble(),
+            secondaryValue: completed.toDouble(),
+          ));
+
+          tableData.add(ReportTableRowData(
+            groupName: _formatGroupLabel(label, filter.groupBy),
+            totalTasks: total,
+            completedTasks: completed,
+            inProgressTasks: inProg,
+            totalEstimatedHours: estH,
+            totalActualHours: actH,
+            completionRate: rate,
+          ));
+        }
+
+        // 3. Query Line Chart (Tren Kehadiran & Jam Kerja Harian)
+        final attConditions = <String>[];
+        final attParams = <String, dynamic>{};
+
+        if (filter.department != 'all') {
+          attConditions.add('d.name = :dept_name');
+          attParams['dept_name'] = filter.department;
+        }
+
+        if (employeeId != null) {
+          attConditions.add('a.employee_id = :emp_id');
+          attParams['emp_id'] = employeeId;
+        } else if (supervisorId != null) {
+          attConditions.add('(es.supervisor_id = :sup_id OR a.employee_id = :sup_id)');
+          attParams['sup_id'] = supervisorId;
+        }
+
+        String attWhereClause = attConditions.isNotEmpty
+            ? 'WHERE ${attConditions.join(" AND ")}'
+            : '';
+
+        String joinSupervisorAtt = (supervisorId != null)
+            ? 'LEFT JOIN employee_supervisors es ON a.employee_id = es.employee_id'
+            : '';
+
+        final lineQuery = '''
+          SELECT 
+            a.attendance_date,
+            COUNT(CASE WHEN a.status IN ('present', 'late') THEN 1 END) AS present_count,
+            COUNT(CASE WHEN a.status = 'late' THEN 1 END) AS late_count,
+            COALESCE(SUM(a.overtime_minutes), 0) AS total_overtime,
+            COALESCE(ROUND(AVG(a.working_minutes) / 60.0, 1), 0.0) AS avg_working_hours
+          FROM attendances a
+          INNER JOIN employees e ON a.employee_id = e.id
+          LEFT JOIN departments d ON e.department_id = d.id
+          $joinSupervisorAtt
+          $attWhereClause
+          GROUP BY a.attendance_date
+          ORDER BY a.attendance_date ASC
+          LIMIT 14
+        ''';
+
+        final lineResults = await connection.execute(lineQuery, attParams);
+        final lineChartData = <LineChartPoint>[];
+
+        for (var row in lineResults.rows) {
+          final data = row.assoc();
+          final rawDate = data['attendance_date']?.toString() ?? '';
+          final parts = rawDate.split(' ')[0].split('-');
+          final shortDate = parts.length == 3 ? '${parts[2]}/${parts[1]}' : rawDate;
+          final presentCount = double.tryParse(data['present_count'] ?? '') ?? 0.0;
+          final avgHours = double.tryParse(data['avg_working_hours'] ?? '') ?? 0.0;
+
+          lineChartData.add(LineChartPoint(
+            xLabel: shortDate,
+            value: presentCount,
+            secondaryValue: avgHours,
+            tooltip: 'Hadir: ${presentCount.toInt()} orang, Rata-rata: ${avgHours}j',
+          ));
+        }
+
+        // 4. Query Pie Chart (Distribusi Status Tugas)
+        final pieQuery = '''
+          SELECT 
+            t.status AS slice_label,
+            COUNT(*) AS slice_count
+          FROM tasks t
+          INNER JOIN employees e ON t.assigned_to = e.id
+          LEFT JOIN departments d ON e.department_id = d.id
+          $joinSupervisor
+          $taskWhereClause
+          GROUP BY t.status
+          ORDER BY slice_count DESC
+        ''';
+
+        final pieResults = await connection.execute(pieQuery, taskParams);
+        final pieChartData = <PieChartSlice>[];
+
+        for (var row in pieResults.rows) {
+          final data = row.assoc();
+          final statusKey = data['slice_label']?.toString() ?? 'not_started';
+          final count = double.tryParse(data['slice_count'] ?? '') ?? 0.0;
+
+          pieChartData.add(PieChartSlice(
+            label: _formatStatusLabel(statusKey),
+            value: count,
+            color: _getStatusColor(statusKey),
+          ));
+        }
+
+        // Hitung Summary KPIs
+        final overallCompletionRate = totalTasksAll > 0
+            ? (completedTasksAll / totalTasksAll) * 100.0
+            : 0.0;
+
+        final summaryKPIs = {
+          'total_tasks': totalTasksAll,
+          'completed_tasks': completedTasksAll,
+          'completion_rate': overallCompletionRate,
+          'total_estimated_hours': totalEstHoursAll,
+          'total_actual_hours': totalActHoursAll,
+          'efficiency_ratio': totalEstHoursAll > 0
+              ? (totalActHoursAll / totalEstHoursAll) * 100.0
+              : 100.0,
+        };
+
+        return DashboardReportData(
+          activeFilter: filter,
+          barChartData: barChartData,
+          lineChartData: lineChartData,
+          pieChartData: pieChartData,
+          tableData: tableData,
+          summaryKPIs: summaryKPIs,
+        );
+      } finally {
+        await connection.close();
+      }
+    } catch (err) {
+      Utils.logger.w('Dashboard Report Fallback: $err');
+      return _getFallbackReportData(filter, supervisorId, employeeId);
+    }
+  }
+
+  static String _formatGroupLabel(String key, String groupBy) {
+    if (groupBy == 'status') {
+      return _formatStatusLabel(key);
+    } else if (groupBy == 'priority') {
+      switch (key.toLowerCase()) {
+        case 'urgent':
+          return 'Mendesak';
+        case 'high':
+          return 'Tinggi';
+        case 'medium':
+          return 'Sedang';
+        case 'low':
+        default:
+          return 'Rendah';
+      }
+    }
+    return key;
+  }
+
+  static String _formatStatusLabel(String status) {
+    switch (status.toLowerCase()) {
+      case 'completed':
+        return 'Selesai';
+      case 'review':
+        return 'Ditinjau';
+      case 'in_progress':
+        return 'Sedang Dikerjakan';
+      case 'not_started':
+      default:
+        return 'Belum Mulai';
+    }
+  }
+
+  static Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'completed':
+        return Utils.neoGreen;
+      case 'review':
+        return Utils.neoYellow;
+      case 'in_progress':
+        return Utils.neoBlue;
+      case 'not_started':
+      default:
+        return Utils.neoRed;
+    }
+  }
+
+  DashboardReportData _getFallbackReportData(
+    ReportFilter filter,
+    int? supervisorId,
+    int? employeeId,
+  ) {
+    // Dataset fallback representatif PRD untuk simulasi offline & testing
+    final rawTasks = [
+      {'title': 'Input data penjualan harian', 'dept': 'Operasional', 'cat': 'Operasional', 'priority': 'high', 'status': 'in_progress', 'est': 8.0, 'act': 4.0, 'emp': 3},
+      {'title': 'Buat konten promosi Instagram', 'dept': 'Pemasaran', 'cat': 'Administrasi', 'priority': 'medium', 'status': 'review', 'est': 6.0, 'act': 6.0, 'emp': 4},
+      {'title': 'Perbaiki bug halaman login', 'dept': 'Teknologi', 'cat': 'Teknologi', 'priority': 'urgent', 'status': 'completed', 'est': 10.0, 'act': 12.0, 'emp': 5},
+      {'title': 'Setup backup database mingguan', 'dept': 'Teknologi', 'cat': 'Teknologi', 'priority': 'high', 'status': 'not_started', 'est': 5.0, 'act': 0.0, 'emp': 6},
+      {'title': 'Rekap absensi & klaim lembur', 'dept': 'Operasional', 'cat': 'Administrasi', 'priority': 'medium', 'status': 'not_started', 'est': 4.0, 'act': 0.0, 'emp': 3},
+      {'title': 'Audit kepatuhan SOP cabang', 'dept': 'Operasional', 'cat': 'Operasional', 'priority': 'low', 'status': 'completed', 'est': 7.0, 'act': 7.0, 'emp': 3},
+      {'title': 'Riset kampanye akhir tahun', 'dept': 'Pemasaran', 'cat': 'Administrasi', 'priority': 'high', 'status': 'in_progress', 'est': 12.0, 'act': 5.0, 'emp': 4},
+      {'title': 'Migrasi server cloud AWS', 'dept': 'Teknologi', 'cat': 'Teknologi', 'priority': 'urgent', 'status': 'in_progress', 'est': 16.0, 'act': 8.0, 'emp': 5},
+    ];
+
+    // Filter tasks
+    var filtered = rawTasks.where((t) {
+      if (employeeId != null && t['emp'] != employeeId) return false;
+      if (filter.department != 'all') {
+        final deptStr = (t['dept'] as String).toLowerCase();
+        final filterDept = filter.department.toLowerCase();
+        if (!deptStr.contains(filterDept) && !filterDept.contains(deptStr)) {
+          return false;
+        }
+      }
+      if (filter.status == 'active' && t['status'] == 'completed') return false;
+      if (filter.status == 'completed' && t['status'] != 'completed') return false;
+      return true;
+    }).toList();
+
+    // Grouping
+    final Map<String, List<Map<String, dynamic>>> groups = {};
+    for (var t in filtered) {
+      String key;
+      if (filter.groupBy == 'category') {
+        key = t['cat'] as String;
+      } else if (filter.groupBy == 'priority') {
+        key = _formatGroupLabel(t['priority'] as String, 'priority');
+      } else if (filter.groupBy == 'status') {
+        key = _formatStatusLabel(t['status'] as String);
+      } else {
+        key = t['dept'] as String;
+      }
+      groups.putIfAbsent(key, () => []).add(t);
+    }
+
+    final barChartData = <BarChartItem>[];
+    final tableData = <ReportTableRowData>[];
+    int totalAll = 0;
+    int completedAll = 0;
+    double totalEstH = 0;
+    double totalActH = 0;
+
+    groups.forEach((label, list) {
+      final total = list.length;
+      final completed = list.where((x) => x['status'] == 'completed').length;
+      final inProg = list.where((x) => x['status'] == 'in_progress' || x['status'] == 'review').length;
+      final estH = list.fold<double>(0.0, (sum, x) => sum + (x['est'] as double));
+      final actH = list.fold<double>(0.0, (sum, x) => sum + (x['act'] as double));
+      final rate = total > 0 ? (completed / total) * 100.0 : 0.0;
+
+      totalAll += total;
+      completedAll += completed;
+      totalEstH += estH;
+      totalActH += actH;
+
+      barChartData.add(BarChartItem(
+        label: label,
+        primaryValue: total.toDouble(),
+        secondaryValue: completed.toDouble(),
+      ));
+
+      tableData.add(ReportTableRowData(
+        groupName: label,
+        totalTasks: total,
+        completedTasks: completed,
+        inProgressTasks: inProg,
+        totalEstimatedHours: estH,
+        totalActualHours: actH,
+        completionRate: rate,
+      ));
+    });
+
+    // Line Chart: Trend Kehadiran Harian
+    final lineChartData = [
+      const LineChartPoint(xLabel: '01 Sep', value: 4.0, secondaryValue: 7.5, tooltip: 'Hadir: 4, Jam Kerja: 7.5j'),
+      const LineChartPoint(xLabel: '02 Sep', value: 4.0, secondaryValue: 8.0, tooltip: 'Hadir: 4, Jam Kerja: 8.0j'),
+      const LineChartPoint(xLabel: '03 Sep', value: 5.0, secondaryValue: 8.2, tooltip: 'Hadir: 5, Jam Kerja: 8.2j'),
+      const LineChartPoint(xLabel: '04 Sep', value: 5.0, secondaryValue: 8.0, tooltip: 'Hadir: 5, Jam Kerja: 8.0j'),
+      const LineChartPoint(xLabel: '05 Sep', value: 6.0, secondaryValue: 8.5, tooltip: 'Hadir: 6, Jam Kerja: 8.5j'),
+      const LineChartPoint(xLabel: '06 Sep', value: 5.0, secondaryValue: 7.8, tooltip: 'Hadir: 5, Jam Kerja: 7.8j'),
+      const LineChartPoint(xLabel: '07 Sep', value: 6.0, secondaryValue: 8.0, tooltip: 'Hadir: 6, Jam Kerja: 8.0j'),
+    ];
+
+    // Pie Chart: Status Breakdown
+    final statusMap = <String, int>{};
+    for (var t in filtered) {
+      final s = t['status'] as String;
+      statusMap[s] = (statusMap[s] ?? 0) + 1;
+    }
+
+    final pieChartData = statusMap.entries.map((e) {
+      return PieChartSlice(
+        label: _formatStatusLabel(e.key),
+        value: e.value.toDouble(),
+        color: _getStatusColor(e.key),
+      );
+    }).toList();
+
+    final overallRate = totalAll > 0 ? (completedAll / totalAll) * 100.0 : 0.0;
+
+    return DashboardReportData(
+      activeFilter: filter,
+      barChartData: barChartData,
+      lineChartData: lineChartData,
+      pieChartData: pieChartData,
+      tableData: tableData,
+      summaryKPIs: {
+        'total_tasks': totalAll,
+        'completed_tasks': completedAll,
+        'completion_rate': overallRate,
+        'total_estimated_hours': totalEstH,
+        'total_actual_hours': totalActH,
+        'efficiency_ratio': totalEstH > 0 ? (totalActH / totalEstH) * 100.0 : 100.0,
+      },
     );
   }
 }

@@ -1,9 +1,69 @@
 import 'package:kita_kerja/core/utils/utils.dart';
 import 'package:kita_kerja/core/database/koneksi.dart';
 import 'package:kita_kerja/models/task_model.dart';
+import 'package:kita_kerja/models/task_progress_model.dart';
 
 class TaskRepository {
-  static final List<TaskModel> _fallbackTasks = [
+  static List<TaskProgressModel> _fallbackTaskProgress = _createInitialTaskProgress();
+  static List<TaskModel> _fallbackTasks = _createInitialTasks();
+
+  static void resetFallbackData() {
+    _fallbackTaskProgress = _createInitialTaskProgress();
+    _fallbackTasks = _createInitialTasks();
+  }
+
+  static List<TaskProgressModel> _createInitialTaskProgress() => [
+    TaskProgressModel(
+      id: 1,
+      taskId: 1,
+      taskTitle: 'Input data penjualan harian',
+      employeeId: 3,
+      employeeName: 'Citra Staff',
+      employeeCode: 'EMP003',
+      status: 'in_progress',
+      progressPercentage: 50,
+      notes: 'Data penjualan tanggal 1-2 sudah diinput',
+      recordedAt: '2026-09-02 10:00:00',
+    ),
+    TaskProgressModel(
+      id: 2,
+      taskId: 2,
+      taskTitle: 'Buat konten promosi Instagram',
+      employeeId: 4,
+      employeeName: 'Dedi Staff',
+      employeeCode: 'EMP004',
+      status: 'review',
+      progressPercentage: 100,
+      notes: 'Menunggu review manager',
+      recordedAt: '2026-09-02 14:00:00',
+    ),
+    TaskProgressModel(
+      id: 3,
+      taskId: 3,
+      taskTitle: 'Perbaiki bug halaman login',
+      employeeId: 5,
+      employeeName: 'Eka Staff',
+      employeeCode: 'EMP005',
+      status: 'completed',
+      progressPercentage: 100,
+      notes: 'Bug sudah diperbaiki dan dites',
+      recordedAt: '2026-09-01 16:30:00',
+    ),
+    TaskProgressModel(
+      id: 4,
+      taskId: 4,
+      taskTitle: 'Setup backup database mingguan',
+      employeeId: 6,
+      employeeName: 'Fajar Staff',
+      employeeCode: 'EMP006',
+      status: 'not_started',
+      progressPercentage: 0,
+      notes: 'Belum mulai',
+      recordedAt: '2026-09-03 08:00:00',
+    ),
+  ];
+
+  static List<TaskModel> _createInitialTasks() => [
     TaskModel(
       id: 1,
       title: 'Input data penjualan harian',
@@ -19,6 +79,8 @@ class TaskRepository {
       actualHours: 4.0,
       startDate: '2026-09-01',
       deadline: '2026-09-05',
+      progressPercentage: 50,
+      latestNotes: 'Data penjualan tanggal 1-2 sudah diinput',
     ),
     TaskModel(
       id: 2,
@@ -35,6 +97,8 @@ class TaskRepository {
       actualHours: 6.0,
       startDate: '2026-09-01',
       deadline: '2026-09-03',
+      progressPercentage: 100,
+      latestNotes: 'Menunggu review manager',
     ),
     TaskModel(
       id: 3,
@@ -52,6 +116,8 @@ class TaskRepository {
       startDate: '2026-08-28',
       deadline: '2026-09-01',
       completedAt: '2026-09-01 16:30:00',
+      progressPercentage: 100,
+      latestNotes: 'Bug sudah diperbaiki dan dites',
     ),
     TaskModel(
       id: 4,
@@ -68,6 +134,8 @@ class TaskRepository {
       actualHours: 0.0,
       startDate: '2026-09-03',
       deadline: '2026-09-07',
+      progressPercentage: 0,
+      latestNotes: 'Belum mulai',
     ),
     TaskModel(
       id: 5,
@@ -84,6 +152,7 @@ class TaskRepository {
       actualHours: 0.0,
       startDate: '2026-09-04',
       deadline: '2026-09-08',
+      progressPercentage: 0,
     ),
   ];
 
@@ -127,10 +196,19 @@ class TaskRepository {
             t.id, t.category_id, t.created_by, t.assigned_to, t.title, t.description,
             t.priority, t.status, t.estimated_hours, t.actual_hours, t.start_date, t.deadline, t.completed_at,
             jc.name AS category_name,
-            e.full_name AS assigned_to_name, e.employee_code
+            e.full_name AS assigned_to_name, e.employee_code,
+            COALESCE(ltp.progress_percentage, CASE WHEN t.status = 'completed' THEN 100 WHEN t.status = 'review' THEN 90 WHEN t.status = 'in_progress' THEN 50 ELSE 0 END) AS progress_percentage,
+            ltp.notes AS latest_notes
           FROM tasks t
           INNER JOIN job_categories jc ON t.category_id = jc.id
           INNER JOIN employees e ON t.assigned_to = e.id
+          LEFT JOIN (
+            SELECT tp1.task_id, tp1.progress_percentage, tp1.notes
+            FROM task_progress tp1
+            INNER JOIN (
+              SELECT task_id, MAX(id) AS max_id FROM task_progress GROUP BY task_id
+            ) tp2 ON tp1.id = tp2.max_id
+          ) ltp ON t.id = ltp.task_id
           $joinSupervisor
           $whereClause
           ORDER BY t.deadline ASC, t.id DESC
@@ -193,10 +271,19 @@ class TaskRepository {
             t.id, t.category_id, t.created_by, t.assigned_to, t.title, t.description,
             t.priority, t.status, t.estimated_hours, t.actual_hours, t.start_date, t.deadline, t.completed_at,
             jc.name AS category_name,
-            e.full_name AS assigned_to_name, e.employee_code
+            e.full_name AS assigned_to_name, e.employee_code,
+            COALESCE(ltp.progress_percentage, CASE WHEN t.status = 'completed' THEN 100 WHEN t.status = 'review' THEN 90 WHEN t.status = 'in_progress' THEN 50 ELSE 0 END) AS progress_percentage,
+            ltp.notes AS latest_notes
           FROM tasks t
           INNER JOIN job_categories jc ON t.category_id = jc.id
           INNER JOIN employees e ON t.assigned_to = e.id
+          LEFT JOIN (
+            SELECT tp1.task_id, tp1.progress_percentage, tp1.notes
+            FROM task_progress tp1
+            INNER JOIN (
+              SELECT task_id, MAX(id) AS max_id FROM task_progress GROUP BY task_id
+            ) tp2 ON tp1.id = tp2.max_id
+          ) ltp ON t.id = ltp.task_id
           $whereClause
           ORDER BY t.deadline ASC, t.id DESC
         ''';
@@ -298,47 +385,179 @@ class TaskRepository {
     }
   }
 
-  Future<bool> updateTaskStatus(
-    int id,
-    String status, {
-    int? employeeId,
+  Future<List<TaskProgressModel>> getTaskProgress(int taskId) async {
+    try {
+      var connection = await DatabaseConnection.getConnection();
+      try {
+        var results = await connection.execute(
+          '''
+          SELECT 
+            tp.id, tp.task_id, tp.employee_id, tp.status, tp.progress_percentage, tp.notes, tp.recorded_at,
+            t.title AS task_title,
+            e.full_name AS employee_name, e.employee_code
+          FROM task_progress tp
+          INNER JOIN tasks t ON tp.task_id = t.id
+          INNER JOIN employees e ON tp.employee_id = e.id
+          WHERE tp.task_id = :task_id
+          ORDER BY tp.recorded_at DESC, tp.id DESC
+          ''',
+          {'task_id': taskId},
+        );
+        return results.rows
+            .map((row) => TaskProgressModel.fromMap(row.assoc()))
+            .toList();
+      } finally {
+        await connection.close();
+      }
+    } catch (err) {
+      Utils.logger.w('Fallback getTaskProgress: $err');
+      return _fallbackTaskProgress
+          .where((p) => p.taskId == taskId)
+          .toList()
+        ..sort((a, b) => b.recordedAt.compareTo(a.recordedAt));
+    }
+  }
+
+  Future<bool> addTaskProgress({
+    required int taskId,
+    required int employeeId,
+    required String status,
+    required int progressPercentage,
     String? notes,
+    double? actualHours,
+    String? employeeName,
+    String? employeeCode,
+    String? taskTitle,
   }) async {
+    final nowStr = DateTime.now().toIso8601String().replaceAll('T', ' ').substring(0, 19);
+    final cleanNotes = (notes != null && notes.trim().isNotEmpty)
+        ? notes.trim()
+        : 'Update progres $progressPercentage% (${status.replaceAll('_', ' ')})';
+
     try {
       var connection = await DatabaseConnection.getConnection();
       try {
         await connection.transactional((conn) async {
           await conn.execute(
             '''
-            UPDATE tasks 
-            SET status = :status,
-                completed_at = CASE WHEN :check_status = 'completed' THEN NOW() ELSE NULL END
-            WHERE id = :id
+            INSERT INTO task_progress (task_id, employee_id, status, progress_percentage, notes, recorded_at)
+            VALUES (:task_id, :employee_id, :status, :pct, :notes, NOW())
             ''',
-            {'status': status, 'check_status': status, 'id': id},
+            {
+              'task_id': taskId,
+              'employee_id': employeeId,
+              'status': status,
+              'pct': progressPercentage,
+              'notes': cleanNotes,
+            },
           );
 
-          if (employeeId != null) {
-            int pct = (status == 'completed')
-                ? 100
-                : (status == 'review'
-                      ? 90
-                      : (status == 'in_progress' ? 50 : 0));
-            await conn.execute(
-              '''
-              INSERT INTO task_progress (task_id, employee_id, status, progress_percentage, notes)
-              VALUES (:task_id, :employee_id, :status, :pct, :notes)
-              ''',
-              {
-                'task_id': id,
-                'employee_id': employeeId,
-                'status': status,
-                'pct': pct,
-                'notes': notes ?? 'Status diperbarui menjadi $status',
-              },
-            );
-          }
+          await conn.execute(
+            '''
+            UPDATE tasks
+            SET 
+              status = :status,
+              actual_hours = CASE WHEN :actual_hours > 0 THEN :actual_hours ELSE actual_hours END,
+              completed_at = CASE WHEN :status = 'completed' THEN NOW() ELSE NULL END
+            WHERE id = :task_id
+            ''',
+            {
+              'task_id': taskId,
+              'status': status,
+              'actual_hours': actualHours ?? 0.0,
+            },
+          );
         });
+        return true;
+      } finally {
+        await connection.close();
+      }
+    } catch (err) {
+      Utils.logger.w('Fallback addTaskProgress: $err');
+      final newProg = TaskProgressModel(
+        id: DateTime.now().millisecondsSinceEpoch % 100000,
+        taskId: taskId,
+        taskTitle: taskTitle,
+        employeeId: employeeId,
+        employeeName: employeeName ?? 'Karyawan',
+        employeeCode: employeeCode ?? 'EMP003',
+        status: status,
+        progressPercentage: progressPercentage,
+        notes: cleanNotes,
+        recordedAt: nowStr,
+      );
+      _fallbackTaskProgress.insert(0, newProg);
+
+      final idx = _fallbackTasks.indexWhere((t) => t.id == taskId);
+      if (idx >= 0) {
+        final t = _fallbackTasks[idx];
+        _fallbackTasks[idx] = TaskModel(
+          id: t.id,
+          categoryId: t.categoryId,
+          categoryName: t.categoryName,
+          createdBy: t.createdBy,
+          assignedTo: t.assignedTo,
+          assignedToName: t.assignedToName,
+          employeeCode: t.employeeCode,
+          title: t.title,
+          description: t.description,
+          priority: t.priority,
+          status: status,
+          estimatedHours: t.estimatedHours,
+          actualHours: (actualHours != null && actualHours > 0) ? actualHours : t.actualHours,
+          startDate: t.startDate,
+          deadline: t.deadline,
+          completedAt: status == 'completed' ? nowStr : null,
+          progressPercentage: progressPercentage,
+          latestNotes: cleanNotes,
+        );
+      }
+      return true;
+    }
+  }
+
+  Future<bool> updateTaskStatus(
+    int id,
+    String status, {
+    int? employeeId,
+    String? notes,
+    int? progressPercentage,
+    double? actualHours,
+    String? employeeName,
+    String? employeeCode,
+  }) async {
+    int pct = progressPercentage ??
+        (status == 'completed'
+            ? 100
+            : (status == 'review'
+                ? 90
+                : (status == 'in_progress' ? 50 : 0)));
+
+    if (employeeId != null) {
+      return addTaskProgress(
+        taskId: id,
+        employeeId: employeeId,
+        status: status,
+        progressPercentage: pct,
+        notes: notes,
+        actualHours: actualHours,
+        employeeName: employeeName,
+        employeeCode: employeeCode,
+      );
+    }
+
+    try {
+      var connection = await DatabaseConnection.getConnection();
+      try {
+        await connection.execute(
+          '''
+          UPDATE tasks 
+          SET status = :status,
+              completed_at = CASE WHEN :check_status = 'completed' THEN NOW() ELSE NULL END
+          WHERE id = :id
+          ''',
+          {'status': status, 'check_status': status, 'id': id},
+        );
         return true;
       } finally {
         await connection.close();
@@ -367,6 +586,8 @@ class TaskRepository {
           completedAt: status == 'completed'
               ? DateTime.now().toIso8601String()
               : null,
+          progressPercentage: pct,
+          latestNotes: notes ?? t.latestNotes,
         );
       }
       return true;

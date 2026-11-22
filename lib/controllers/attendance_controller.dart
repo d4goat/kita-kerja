@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kita_kerja/models/attendance_model.dart';
+import 'package:kita_kerja/models/master_data_model.dart';
 import 'package:kita_kerja/models/user_model.dart';
 import 'package:kita_kerja/repositories/attendance_repository.dart';
 
@@ -8,12 +9,14 @@ class AttendanceController extends ChangeNotifier {
 
   List<AttendanceModel> _attendances = [];
   AttendanceModel? _todayAttendance;
+  WorkScheduleModel? _userSchedule;
   bool _isLoading = false;
   String _searchQuery = '';
   String _selectedStatus = 'all';
 
   List<AttendanceModel> get attendances => _attendances;
   AttendanceModel? get todayAttendance => _todayAttendance;
+  WorkScheduleModel? get userSchedule => _userSchedule;
   bool get isLoading => _isLoading;
   String get searchQuery => _searchQuery;
   String get selectedStatus => _selectedStatus;
@@ -38,6 +41,7 @@ class AttendanceController extends ChangeNotifier {
     notifyListeners();
     try {
       final empId = currentUser?.employeeId ?? 3;
+      _userSchedule = await _repository.getEmployeeSchedule(empId);
       if (currentUser != null && currentUser.isEmployee) {
         _attendances = await _repository.getEmployeeAttendances(empId);
         _todayAttendance = await _repository.getTodayAttendance(empId);

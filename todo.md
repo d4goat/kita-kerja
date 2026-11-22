@@ -8,10 +8,10 @@ Berdasarkan perbandingan antara **Product Requirements Document (PRD v1.0)** dan
 | Modul PRD | Status Saat Ini | Catatan Gap Utama |
 | :--- | :---: | :--- |
 | **6.1 Autentikasi** | 🟢 Selesai (Tahap 1) | Remember Me persisten di local storage; Fitur Ganti Password & Update Profil DB aktif |
-| **6.2 Dashboard** | 🟢 Sebagian Besar | KPI dan visualisasi siap; aksi lanjutan rebalancing beban kerja ada di Tahap 3 |
+| **6.2 Dashboard** | 🟢 Selesai Penuh | KPI, monitoring beban kerja, serta fitur Pelaporan Data (Data Reporting) lengkap dengan filtering/grouping dinamis dan 3 tipe chart (Bar, Line, Pie) |
 | **6.3 Karyawan** | 🟢 Selesai Penuh | CRUD lengkap, Modal Profil Detail, dan Relasi Supervisor (`employee_supervisors`) aktif |
-| **6.4 Kehadiran** | 🟢 Selesai (Tahap 1) | Clock-in/out, Koreksi Presensi Admin, dan Pengajuan Izin/Sakit aktif |
-| **6.5 Pekerjaan** | 🟡 Sebagian | CRUD & status makro aktif; Riwayat progres persentase (`task_progress`) di Tahap 2 |
+| **6.4 Kehadiran** | 🟢 Selesai Penuh | Clock-in/out dinamis sesuai work_schedules & toleransi, Koreksi Presensi Admin, Pengajuan Izin/Sakit aktif |
+| **6.5 Pekerjaan** | 🟢 Selesai Penuh | CRUD, status makro, timeline & log riwayat progres persentase (task_progress) aktif |
 | **6.6 Beban Kerja** | 🟡 Sebagian | Rumus & alert dashboard aktif; Snapshot periodik (`workload_records`) di Tahap 3 |
 | **6.7 Gaji (Payroll)** | 🔴 Parsial Ringan | Hanya tabel & slip personal read-only; Generate gaji & kalkulasi lembur di Tahap 2 |
 | **6.8 Data Master** | 🟢 Selesai (Tahap 1) | 5 entitas master CRUD selesai; terintegrasi rapi di dalam Tab Menu Pengaturan |
@@ -66,18 +66,34 @@ Berdasarkan perbandingan antara **Product Requirements Document (PRD v1.0)** dan
 - [x] **Pencatatan & Pengajuan Izin / Sakit / Cuti (Leave & Sick Management)**
   - Modal form pengajuan izin/sakit/cuti dengan input tanggal, pilihan tipe (`sick`/`leave`), dan alasan.
   - Method `submitAbsenceRequest` pada `AttendanceRepository` & `AttendanceController`.
-- [ ] **Kalkulasi Jam Kerja & Lembur Berdasarkan `work_schedules`** *(Tahap 2)*
+- [x] **Kalkulasi Jam Kerja & Lembur Berdasarkan `work_schedules`** *(Tahap 2)*
   - Menghitung durasi kerja dan lembur secara dinamis mengacu pada jam masuk/pulang serta toleransi di tabel `work_schedules` (bukan hardcoded 480 menit / 8 jam).
 
 ---
 
 ### Modul 5: Manajemen Pekerjaan & Riwayat Progres (PRD Sec 6.5 & Tabel 12)
-- [ ] **Pencatatan Riwayat Progres Pekerjaan (`task_progress`)** *(Tahap 2)*
+- [x] **Pencatatan Riwayat Progres Pekerjaan (`task_progress`)** *(Tahap 2)*
   - Model `TaskProgressModel` dan integrasi ke tabel `task_progress`.
   - Input persentase progres aktual (0% – 100%) oleh karyawan saat mengerjakan tugas.
   - Form penambahan catatan/log progres singkat (misal: "Selesai merapikan layout, lanjut styling tombol").
-- [ ] **Timeline / Log Riwayat Progres Tugas** *(Tahap 2)*
+- [x] **Timeline / Log Riwayat Progres Tugas** *(Tahap 2)*
   - Tampilan riwayat/catatan perkembangan pekerjaan yang dapat ditinjau oleh Admin & Manager sebelum mengubah status tugas menjadi `completed`.
+
+---
+
+### Modul Improvisasi: Fitur Pelaporan Data Dashboard (Data Reporting)
+- [x] **Query Database Agregasi Laporan (`DashboardRepository.getReportData`)**
+  - Query SQL dinamis dengan JOIN `tasks`, `employees`, `departments`, `job_categories`, dan `attendances`.
+  - Agregasi metrik: jumlah tugas per grup, rasio penyelesaian tugas, total jam estimasi vs aktual, dan tren kehadiran 14 hari.
+  - Fallback data cerdas offline/testing sesuai filter aktif.
+- [x] **Fitur Filtering & Grouping Laporan (`ReportFilter`)**
+  - **Data Filtering**: Filter berdasarkan Departemen (`all`, `Operasional`, `Pemasaran`, `Teknologi`, `Administrasi`), Rentang Waktu (`this_month`, `30_days`, `7_days`, `all`), dan Status Tugas (`all`, `active`, `completed`).
+  - **Data Grouping**: Pengelompokan dinamis berdasarkan Departemen Tim (`department`), Kategori Pekerjaan (`category`), Prioritas Tugas (`priority`), atau Status Pengerjaan (`status`).
+- [x] **Visualisasi Data 3 Jenis Chart Neo-Brutalism (`neo_charts.dart`)**
+  - **Bar Chart (`NeoBarChart`)**: Grafik batang perbandingan (Total Tugas vs Selesai) dengan sumbu Y dinamis, label numerik, dan legenda Neo-brutalism.
+  - **Line Chart (`NeoLineChart`)**: Grafik garis tren kehadiran dan rata-rata jam kerja harian dilengkapi node interaktif, area bayangan, dan koordinat tanggal.
+  - **Pie / Donut Chart (`NeoPieChart`)**: Grafik donat distribusi status pengerjaan tugas dengan persentase proporsional, ringkasan total di titik tengah, dan legenda status warna Neo.
+  - **Tabel Rekapitulasi Data (`NeoTable`)**: Rincian angka per kelompok dengan metrik tugas selesai, tugas berjalan, estimasi jam, jam aktual, dan rasio penyelesaian.
 
 ---
 
@@ -127,10 +143,10 @@ Berdasarkan perbandingan antara **Product Requirements Document (PRD v1.0)** dan
 4. **Detail Karyawan**: Modal detail komprehensif profil karyawan lengkap.
 
 ### ⏳ Tahap 2: Prioritas Sedang (Transaksional & Kolaborasi Tim)
-5. **Progres Pekerjaan (`task_progress`)**: Input persentase progres dan riwayat catatan log tugas.
+5. ~~**Progres Pekerjaan (`task_progress`)**: Input persentase progres dan riwayat catatan log tugas.~~ *(Selesai)*
 6. **Payroll Penuh (`salaries`)**: Generate gaji bulanan, input bonus/potongan, dan kalkulasi lembur dari presensi.
 7. ~~**Relasi Supervisor (`employee_supervisors`)**: Penetapan tim binaan manager dan filter presensi/tugas tim.~~ *(Selesai)*
-8. **Kalkulasi Jam Kerja Dinamis**: Sesuai toleransi `work_schedules`.
+8. ~~**Kalkulasi Jam Kerja Dinamis**: Sesuai toleransi `work_schedules`.~~ *(Selesai)*
 
 ### ⏳ Tahap 3: Prioritas Pelengkap (Stabilitas & Compliance)
 9. **Snapshot Beban Kerja (`workload_records`)** & Aksi Rebalance Tugas langsung dari alert dashboard.

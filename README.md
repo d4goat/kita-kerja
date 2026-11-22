@@ -47,7 +47,7 @@ Aplikasi ini juga selaras dengan mendukung pencapaian **SDG 8 (Decent Work and E
 
 ## 🧭 Struktur Navigasi & Fitur Utama
 
-1. **Dashboard**: Menampilkan statistik KPI (Total Karyawan, Hadir Hari Ini, Pekerjaan Aktif, Lembur) dan peringatan beban kerja melebihi kapasitas.
+1. **Dashboard**: Menampilkan statistik KPI utama, tab **Pelaporan Data (Reporting)** dengan filtering & grouping dinamis, 3 varian chart interaktif (Bar, Line, Pie), serta peringatan beban kerja tim.
 2. **Karyawan**: Pengelolaan data karyawan (CRUD), referensi jabatan, departemen, jenis gaji, dan jadwal kerja.
 3. **Kehadiran**: Pencatatan waktu Masuk & Pulang kerja, kalkulasi jam kerja serta menit lembur.
 4. **Pekerjaan**: Pembuatan & penugasan pekerjaan dengan alur status (`Belum Mulai` → `Sedang Dikerjakan` → `Ditinjau` → `Selesai`).
@@ -57,6 +57,30 @@ Aplikasi ini juga selaras dengan mendukung pencapaian **SDG 8 (Decent Work and E
    - **Profil**: Pengaturan akun pribadi.
    - **Data Master**: Jabatan, Departemen, Kategori Pekerjaan, Jenis Gaji, Jadwal Kerja.
    - **Keamanan**: Pengaturan kata sandi dan autentikasi.
+
+---
+
+## 📸 Tangkapan Layar Implementasi Dashboard & Chart Reporting
+
+Berikut adalah tangkapan layar hasil implementasi fitur pelaporan data dan visualisasi chart pada Dashboard KerjaKita dengan gaya antarmuka **Neo-Brutalism**:
+
+### 1. Filter Dinamis & Ringkasan KPI Laporan
+Filter data interaktif (Departemen, Rentang Waktu, Status Pekerjaan, serta Grouping Dinamis) disertai 4 kartu metrik performa (Total Pekerjaan, Tingkat Selesai, Jam Aktual, dan Efisiensi Waktu).
+
+![Filter & Ringkasan KPI Laporan](assets/img/screenshot/dashboard-img-1.png)
+
+### 2. Tiga Jenis Chart Interaktif (Bar Chart, Pie Chart, & Line Chart)
+Visualisasi multi-dimensi yang menampilkan:
+- **Bar Chart**: Grafik batang ganda perbandingan total beban tugas vs tugas tuntas berdasarkan pengelompokan.
+- **Pie / Donut Chart**: Distribusi proporsi status tugas (*Belum Mulai*, *Ditinjau*, *Selesai*) lengkap dengan total di tengah donat dan legenda persentase.
+- **Line Chart**: Area grafik garis tren fluktuasi jumlah kehadiran staf per hari.
+
+![Visualisasi Bar Chart, Pie Chart, dan Line Chart](assets/img/screenshot/dashboard-img-2.png)
+
+### 3. Tren Kehadiran & Tabel Rekapitulasi Data Laporan
+Tampilan grafik garis tren kehadiran harian yang dipadukan dengan tabel rekapitulasi data hasil *grouping* (merinci total tugas, status, estimasi jam, jam aktual, dan rasio penyelesaian).
+
+![Line Chart & Tabel Rekapitulasi Data](assets/img/screenshot/dashboard-img-3.png)
 
 ---
 

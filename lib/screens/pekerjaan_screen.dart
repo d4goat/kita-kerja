@@ -5,6 +5,7 @@ import 'package:kita_kerja/controllers/task_controller.dart';
 import 'package:kita_kerja/core/utils/utils.dart';
 import 'package:kita_kerja/layouts/main_layout.dart';
 import 'package:kita_kerja/models/task_model.dart';
+import 'package:kita_kerja/models/task_progress_model.dart';
 import 'package:kita_kerja/widgets/neo_components.dart';
 import 'package:provider/provider.dart';
 import 'package:toastification/toastification.dart';
@@ -36,16 +37,32 @@ class _PekerjaanScreenState extends State<PekerjaanScreen> {
     TaskController controller,
     AuthController auth,
   ) {
-    final currentStatus = task.status;
-    final isEmployee = auth.isEmployee;
+    _showTaskProgressDetailDialog(task, controller, auth);
+  }
 
-    final options = isEmployee
-        ? [
+  void _showTaskProgressDetailDialog(
+    TaskModel task,
+    TaskController controller,
+    AuthController auth,
+  ) {
+    final isEmployee = auth.isEmployee;
+    String selectedStatus = task.status;
+    double currentPercentage = task.progressPercentage.toDouble();
+    final notesController = TextEditingController();
+    final hoursController = TextEditingController(
+      text: task.actualHours > 0 ? task.actualHours.toString() : '',
+    );
+    bool isSaving = false;
+    Future<List<TaskProgressModel>> progressFuture =
+        controller.getTaskProgress(task.id);
+
+    final statusOptions = isEmployee
+        ? const [
             {'val': 'not_started', 'label': 'Belum Mulai'},
             {'val': 'in_progress', 'label': 'Sedang Dikerjakan'},
             {'val': 'review', 'label': 'Minta Review (Ditinjau)'},
           ]
-        : [
+        : const [
             {'val': 'not_started', 'label': 'Belum Mulai'},
             {'val': 'in_progress', 'label': 'Sedang Dikerjakan'},
             {'val': 'review', 'label': 'Ditinjau (Review)'},
@@ -54,86 +71,569 @@ class _PekerjaanScreenState extends State<PekerjaanScreen> {
 
     NeoDialog.show(
       context: context,
-      title: 'Perbarui Status Progres',
-      maxWidth: 480,
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Tugas: "${task.title}"',
-            style: GoogleFonts.inter(
-              fontWeight: FontWeight.w700,
-              color: Utils.neoBlack,
-            ),
-          ),
-          const SizedBox(height: 16),
-          ...options.map((opt) {
-            final isSelected = opt['val'] == currentStatus;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: MouseRegion(
-                cursor: SystemMouseCursors.click,
-                child: GestureDetector(
-                  onTap: () async {
-                    Navigator.pop(context);
-                    final newVal = opt['val'] as String;
-                    if (newVal != currentStatus) {
-                      final ok = await controller.updateTaskStatus(
-                        taskId: task.id,
-                        status: newVal,
-                        currentUser: auth.currentUser,
-                        notes: isEmployee
-                            ? 'Update progres oleh ${auth.currentUser?.name}'
-                            : null,
-                      );
-                      if (ok && mounted) {
-                        Utils.toast(
-                          context,
-                          'Status tugas berhasil diubah!',
-                          ToastificationType.success,
-                          Icons.check,
-                          Utils.neoGreen,
-                        );
-                      }
-                    }
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isSelected ? Utils.neoYellow : Utils.neoCream,
-                      borderRadius: BorderRadius.zero,
+      title: 'Riwayat & Progres Pekerjaan',
+      maxWidth: 680,
+      content: StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return SizedBox(
+            width: double.maxFinite,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 1. Task Header Summary Card
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: const BoxDecoration(
+                      color: Utils.neoCream,
                       border: Utils.borderW,
-                      boxShadow: isSelected ? Utils.shadowMd : Utils.shadowSm,
+                      boxShadow: Utils.shadowSm,
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          opt['label'] as String,
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: Utils.neoBlack,
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    task.title,
+                                    style: GoogleFonts.spaceGrotesk(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      color: Utils.neoBlack,
+                                    ),
+                                  ),
+                                  if (task.description.isNotEmpty) ...[
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      task.description,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 13,
+                                        color: Utils.neoBlack,
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            NeoBadge.taskStatus(task.status),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            NeoTag(label: task.categoryName),
+                            NeoBadge.taskPriority(task.priority),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                NeoAvatar(name: task.assignedToName, size: 20),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '${task.assignedToName} (${task.employeeCode})',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Utils.neoBlack,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.calendar_today, size: 14, color: Utils.neoBlack),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Deadline: ${task.deadline}',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: Utils.neoBlack,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.timer_outlined, size: 14, color: Utils.neoBlack),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Est: ${task.estimatedHours}j • Akt: ${task.actualHours}j',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Utils.neoBlack,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        // Indikator Progres Visual Saat Ini
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Progres Terkini',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Utils.neoBlack,
+                              ),
+                            ),
+                            Text(
+                              '${task.progressPercentage}%',
+                              style: GoogleFonts.spaceGrotesk(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: Utils.neoBlack,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Container(
+                          height: 12,
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            border: Utils.borderWSm,
+                          ),
+                          child: FractionallySizedBox(
+                            alignment: Alignment.centerLeft,
+                            widthFactor: (task.progressPercentage / 100.0).clamp(0.0, 1.0),
+                            child: Container(
+                              color: task.status == 'completed'
+                                  ? Utils.neoGreen
+                                  : (task.status == 'review'
+                                      ? Utils.neoYellow
+                                      : Utils.neoBlue),
+                            ),
                           ),
                         ),
-                        if (isSelected)
-                          const Icon(
-                            Icons.check,
-                            color: Utils.neoBlack,
-                            size: 18,
-                          ),
                       ],
                     ),
                   ),
-                ),
+
+                  // Aksi Cepat Persetujuan bagi Admin / Manager jika tugas berstatus 'review'
+                  if (!isEmployee && task.status == 'review') ...[
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: const BoxDecoration(
+                        color: Utils.neoYellow,
+                        border: Utils.borderW,
+                        boxShadow: Utils.shadowSm,
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.info_outline, color: Utils.neoBlack, size: 24),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Tugas sedang dalam tinjauan tim. Anda dapat meninjau log di bawah lalu menyetujui:',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Utils.neoBlack,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          NeoButton(
+                            text: 'Setujui (100%)',
+                            variant: NeoButtonVariant.success,
+                            size: NeoButtonSize.sm,
+                            icon: const Icon(Icons.check_circle_outline, size: 16),
+                            onPressed: () async {
+                              Navigator.pop(context);
+                              final ok = await controller.recordTaskProgress(
+                                taskId: task.id,
+                                employeeId: auth.currentUser?.employeeId ?? task.assignedTo,
+                                status: 'completed',
+                                progressPercentage: 100,
+                                notes: 'Disetujui dan diselesaikan oleh ${auth.currentUser?.name}',
+                                currentUser: auth.currentUser,
+                                taskTitle: task.title,
+                              );
+                              if (ok && mounted) {
+                                Utils.toast(
+                                  context,
+                                  'Tugas "${task.title}" berhasil disetujui & diselesaikan!',
+                                  ToastificationType.success,
+                                  Icons.check,
+                                  Utils.neoGreen,
+                                );
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 20),
+
+                  // 2. TIMELINE RIWAYAT PROGRES (PRD Sec 6.5 & Tabel 12)
+                  Row(
+                    children: [
+                      const Icon(Icons.timeline, size: 20, color: Utils.neoBlack),
+                      const SizedBox(width: 8),
+                      Text(
+                        'TIMELINE RIWAYAT PROGRES',
+                        style: GoogleFonts.spaceGrotesk(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: Utils.neoBlack,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  FutureBuilder<List<TaskProgressModel>>(
+                    future: progressFuture,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 20),
+                          child: Center(
+                            child: SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Utils.neoBlack),
+                            ),
+                          ),
+                        );
+                      }
+                      final logs = snapshot.data ?? [];
+                      if (logs.isEmpty) {
+                        return Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: const BoxDecoration(
+                            color: Utils.neoCream,
+                            border: Utils.borderWSm,
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.history_toggle_off, size: 24, color: Utils.neoBlack),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Belum ada catatan log riwayat progres untuk pekerjaan ini.',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    color: Utils.neoBlack,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      return ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: logs.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        itemBuilder: (ctx, idx) {
+                          final log = logs[idx];
+                          return Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: const BoxDecoration(
+                              color: Utils.neoCream,
+                              border: Utils.borderWSm,
+                              boxShadow: Utils.shadowSm,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: const BoxDecoration(
+                                        color: Utils.neoBlack,
+                                      ),
+                                      child: Text(
+                                        '${log.progressPercentage}%',
+                                        style: GoogleFonts.spaceGrotesk(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: Utils.neoCream,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    NeoBadge.taskStatus(log.status),
+                                    const Spacer(),
+                                    Text(
+                                      log.recordedAt.length >= 16
+                                          ? log.recordedAt.substring(0, 16)
+                                          : log.recordedAt,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: Utils.neoBlack,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  log.notes,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: Utils.neoBlack,
+                                    height: 1.3,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.person_outline, size: 14, color: Utils.neoBlack),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Dicatat oleh: ${log.employeeName ?? "Karyawan"} ${log.employeeCode != null ? "(${log.employeeCode})" : ""}',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        color: Utils.neoBlack.withOpacity(0.8),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 24),
+                  const Divider(color: Utils.neoBlack, thickness: 1.5),
+                  const SizedBox(height: 14),
+
+                  // 3. FORM CATAT PROGRES AKTUAL (Input 0% - 100% & Catatan Singkat)
+                  Row(
+                    children: [
+                      const Icon(Icons.edit_note, size: 20, color: Utils.neoBlack),
+                      const SizedBox(width: 8),
+                      Text(
+                        'CATAT PROGRES AKTUAL',
+                        style: GoogleFonts.spaceGrotesk(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: Utils.neoBlack,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Pilihan Status
+                  Text(
+                    'STATUS PROGRES PEKERJAAN',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Utils.neoBlack,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Container(
+                    height: 44,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: const BoxDecoration(
+                      color: Utils.neoCream,
+                      border: Utils.borderW,
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: selectedStatus,
+                        isExpanded: true,
+                        dropdownColor: Utils.neoCream,
+                        items: statusOptions.map((opt) {
+                          return DropdownMenuItem<String>(
+                            value: opt['val'],
+                            child: Text(
+                              opt['label']!,
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Utils.neoBlack,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setDialogState(() {
+                              selectedStatus = val;
+                              if (val == 'completed') {
+                                currentPercentage = 100;
+                              } else if (val == 'review' && currentPercentage < 80) {
+                                currentPercentage = 90;
+                              } else if (val == 'in_progress' && currentPercentage == 0) {
+                                currentPercentage = 25;
+                              }
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // Input Persentase Progres Aktual (0% - 100%) dengan Slider & Preset
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'PERSENTASE PROGRES AKTUAL',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Utils.neoBlack,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: const BoxDecoration(
+                          color: Utils.neoBlack,
+                        ),
+                        child: Text(
+                          '${currentPercentage.toInt()}%',
+                          style: GoogleFonts.spaceGrotesk(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: Utils.neoCream,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      activeTrackColor: Utils.neoBlack,
+                      inactiveTrackColor: Colors.grey.shade400,
+                      thumbColor: Utils.neoYellow,
+                      overlayColor: Utils.neoYellow.withOpacity(0.3),
+                      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
+                      trackHeight: 6,
+                    ),
+                    child: Slider(
+                      value: currentPercentage,
+                      min: 0,
+                      max: 100,
+                      divisions: 20,
+                      onChanged: (val) {
+                        setDialogState(() {
+                          currentPercentage = val;
+                          if (currentPercentage == 100 && !isEmployee) {
+                            selectedStatus = 'completed';
+                          } else if (currentPercentage >= 90 && isEmployee) {
+                            selectedStatus = 'review';
+                          } else if (currentPercentage > 0 && selectedStatus == 'not_started') {
+                            selectedStatus = 'in_progress';
+                          }
+                        });
+                      },
+                    ),
+                  ),
+
+                  // Preset chips (25%, 50%, 75%, 100%)
+                  Row(
+                    children: [
+                      const Text(
+                        'Preset Cepat: ',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(width: 8),
+                      ...[25, 50, 75, 100].map((pct) {
+                        final isSel = currentPercentage.toInt() == pct;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: MouseRegion(
+                            cursor: SystemMouseCursors.click,
+                            child: GestureDetector(
+                              onTap: () {
+                                setDialogState(() {
+                                  currentPercentage = pct.toDouble();
+                                  if (pct == 100 && !isEmployee) {
+                                    selectedStatus = 'completed';
+                                  } else if (pct >= 90 && isEmployee) {
+                                    selectedStatus = 'review';
+                                  } else if (pct > 0 && selectedStatus == 'not_started') {
+                                    selectedStatus = 'in_progress';
+                                  }
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: isSel ? Utils.neoYellow : Utils.neoCream,
+                                  border: Utils.borderWSm,
+                                  boxShadow: isSel ? Utils.shadowSm : null,
+                                ),
+                                child: Text(
+                                  '$pct%',
+                                  style: GoogleFonts.spaceGrotesk(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: Utils.neoBlack,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // Input Catatan / Log Progres Singkat
+                  NeoTextField(
+                    label: 'Catatan Log Progres Singkat',
+                    placeholder: 'Misal: Selesai merapikan layout, lanjut styling tombol',
+                    controller: notesController,
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Input Jam Aktual (Opsional)
+                  NeoTextField(
+                    label: 'Jam Pengerjaan Aktual (Opsional)',
+                    placeholder: 'Contoh: 4.5',
+                    controller: hoursController,
+                  ),
+                ],
               ),
-            );
-          }),
-        ],
+            ),
+          );
+        },
       ),
       actions: [
         NeoButton(
@@ -141,6 +641,52 @@ class _PekerjaanScreenState extends State<PekerjaanScreen> {
           variant: NeoButtonVariant.neutral,
           size: NeoButtonSize.sm,
           onPressed: () => Navigator.pop(context),
+        ),
+        const SizedBox(width: 12),
+        NeoButton(
+          text: 'Simpan Progres',
+          variant: NeoButtonVariant.primary,
+          size: NeoButtonSize.sm,
+          isLoading: isSaving,
+          onPressed: () async {
+            final pct = currentPercentage.toInt();
+            final notes = notesController.text.trim();
+            final actualHours = double.tryParse(hoursController.text.trim());
+
+            Navigator.pop(context);
+
+            final ok = await controller.recordTaskProgress(
+              taskId: task.id,
+              employeeId: auth.currentUser?.employeeId ?? task.assignedTo,
+              status: selectedStatus,
+              progressPercentage: pct,
+              notes: notes.isNotEmpty
+                  ? notes
+                  : 'Update progres $pct% (${selectedStatus.replaceAll('_', ' ')})',
+              actualHours: actualHours,
+              currentUser: auth.currentUser,
+              taskTitle: task.title,
+            );
+
+            if (!mounted) return;
+            if (ok) {
+              Utils.toast(
+                context,
+                'Log progres pekerjaan berhasil dicatat!',
+                ToastificationType.success,
+                Icons.check,
+                Utils.neoGreen,
+              );
+            } else {
+              Utils.toast(
+                context,
+                'Gagal mencatat progres pekerjaan',
+                ToastificationType.error,
+                Icons.close,
+                Utils.neoRed,
+              );
+            }
+          },
         ),
       ],
     );
@@ -387,6 +933,54 @@ class _PekerjaanScreenState extends State<PekerjaanScreen> {
                     NeoBadge.taskPriority(task.priority),
                   ],
                 ),
+                const SizedBox(height: 8),
+                // Progress Bar & Percentage
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          border: Utils.borderWSm,
+                        ),
+                        child: FractionallySizedBox(
+                          alignment: Alignment.centerLeft,
+                          widthFactor: (task.progressPercentage / 100.0).clamp(0.0, 1.0),
+                          child: Container(
+                            color: task.status == 'completed'
+                                ? Utils.neoGreen
+                                : (task.status == 'review'
+                                    ? Utils.neoYellow
+                                    : Utils.neoBlue),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${task.progressPercentage}%',
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Utils.neoBlack,
+                      ),
+                    ),
+                  ],
+                ),
+                if (task.latestNotes != null && task.latestNotes!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Log: ${task.latestNotes}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontStyle: FontStyle.italic,
+                      color: Utils.neoBlack.withOpacity(0.7),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 10),
                 Row(
                   children: [
@@ -668,21 +1262,23 @@ class _PekerjaanScreenState extends State<PekerjaanScreen> {
                       emptyText: 'Tidak ada pekerjaan ditemukan',
                       columnWidths: isEmployee
                           ? const {
-                              0: FlexColumnWidth(2.3),
+                              0: FlexColumnWidth(2.2),
                               1: FlexColumnWidth(1.2),
-                              2: FlexColumnWidth(1.2),
-                              3: FlexColumnWidth(1.5),
-                              4: FlexColumnWidth(1.2),
-                              5: FlexColumnWidth(1.0),
+                              2: FlexColumnWidth(1.0),
+                              3: FlexColumnWidth(1.4),
+                              4: FlexColumnWidth(1.3),
+                              5: FlexColumnWidth(1.1),
+                              6: FlexColumnWidth(1.1),
                             }
                           : const {
-                              0: FlexColumnWidth(2.0),
-                              1: FlexColumnWidth(1.4),
-                              2: FlexColumnWidth(1.1),
-                              3: FlexColumnWidth(1.2),
-                              4: FlexColumnWidth(1.6),
-                              5: FlexColumnWidth(1.1),
-                              6: FlexColumnWidth(0.9),
+                              0: FlexColumnWidth(1.8),
+                              1: FlexColumnWidth(1.3),
+                              2: FlexColumnWidth(1.0),
+                              3: FlexColumnWidth(1.0),
+                              4: FlexColumnWidth(1.3),
+                              5: FlexColumnWidth(1.2),
+                              6: FlexColumnWidth(1.1),
+                              7: FlexColumnWidth(1.3),
                             },
                       headers: isEmployee
                           ? const [
@@ -690,6 +1286,7 @@ class _PekerjaanScreenState extends State<PekerjaanScreen> {
                               NeoTableHeaderCell('KATEGORI'),
                               NeoTableHeaderCell('PRIORITAS'),
                               NeoTableHeaderCell('STATUS'),
+                              NeoTableHeaderCell('PROGRES'),
                               NeoTableHeaderCell('DEADLINE'),
                               NeoTableHeaderCell(
                                 'AKSI',
@@ -702,6 +1299,7 @@ class _PekerjaanScreenState extends State<PekerjaanScreen> {
                               NeoTableHeaderCell('KATEGORI'),
                               NeoTableHeaderCell('PRIORITAS'),
                               NeoTableHeaderCell('STATUS'),
+                              NeoTableHeaderCell('PROGRES'),
                               NeoTableHeaderCell('DEADLINE'),
                               NeoTableHeaderCell(
                                 'AKSI',
@@ -789,12 +1387,61 @@ class _PekerjaanScreenState extends State<PekerjaanScreen> {
                             child: MouseRegion(
                               cursor: SystemMouseCursors.click,
                               child: GestureDetector(
-                                onTap: () => _handleQuickStatusDialog(
+                                onTap: () => _showTaskProgressDetailDialog(
                                   task,
                                   controller,
                                   auth,
                                 ),
                                 child: NeoBadge.taskStatus(task.status),
+                              ),
+                            ),
+                          ),
+                        );
+
+                        // Progres Bar Mini & Persentase
+                        rowCells.add(
+                          NeoTableCell(
+                            child: MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              child: GestureDetector(
+                                onTap: () => _showTaskProgressDetailDialog(
+                                  task,
+                                  controller,
+                                  auth,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 48,
+                                      height: 10,
+                                      decoration: const BoxDecoration(
+                                        color: Colors.white,
+                                        border: Utils.borderWSm,
+                                      ),
+                                      child: FractionallySizedBox(
+                                        alignment: Alignment.centerLeft,
+                                        widthFactor: (task.progressPercentage / 100.0).clamp(0.0, 1.0),
+                                        child: Container(
+                                          color: task.status == 'completed'
+                                              ? Utils.neoGreen
+                                              : (task.status == 'review'
+                                                  ? Utils.neoYellow
+                                                  : Utils.neoBlue),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '${task.progressPercentage}%',
+                                      style: GoogleFonts.spaceGrotesk(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: Utils.neoBlack,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
@@ -809,10 +1456,11 @@ class _PekerjaanScreenState extends State<PekerjaanScreen> {
                             NeoTableCell(
                               alignment: Alignment.center,
                               child: NeoButton(
-                                text: 'Update',
+                                text: 'Progres',
                                 size: NeoButtonSize.sm,
-                                variant: NeoButtonVariant.neutral,
-                                onPressed: () => _handleQuickStatusDialog(
+                                variant: NeoButtonVariant.primary,
+                                icon: const Icon(Icons.edit_note, size: 16),
+                                onPressed: () => _showTaskProgressDetailDialog(
                                   task,
                                   controller,
                                   auth,
@@ -827,6 +1475,17 @@ class _PekerjaanScreenState extends State<PekerjaanScreen> {
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
+                                  NeoIconButton(
+                                    icon: Icons.timeline,
+                                    size: 32,
+                                    tooltip: 'Riwayat Progres',
+                                    onPressed: () => _showTaskProgressDetailDialog(
+                                      task,
+                                      controller,
+                                      auth,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
                                   NeoIconButton(
                                     icon: Icons.edit,
                                     size: 32,

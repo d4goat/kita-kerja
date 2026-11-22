@@ -85,7 +85,9 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
                     const NeoTag(label: 'PRESENSI HARI INI'),
                     const SizedBox(width: 10),
                     Text(
-                      'Shift Pagi 08:00 – 17:00 WIB',
+                      controller.userSchedule != null
+                          ? '${controller.userSchedule!.name} ${controller.userSchedule!.startTime} – ${controller.userSchedule!.endTime} WIB'
+                          : 'Jam Kerja Normal 08:00 – 17:00 WIB',
                       style: GoogleFonts.inter(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -140,7 +142,7 @@ class _KehadiranScreenState extends State<KehadiranScreen> {
                       ),
                       const SizedBox(width: 10),
                       Text(
-                        'Total Jam Kerja: ${today?.workingHoursFormatted ?? '8j'}',
+                        'Total Jam Kerja: ${today?.workingHoursFormatted ?? '8.0'}j${(today != null && today.overtimeMinutes > 0) ? ' (Lembur: ${today.overtimeMinutes}m)' : ''}',
                         style: GoogleFonts.inter(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,

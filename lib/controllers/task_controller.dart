@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kita_kerja/models/task_model.dart';
+import 'package:kita_kerja/models/task_progress_model.dart';
 import 'package:kita_kerja/models/user_model.dart';
 import 'package:kita_kerja/repositories/task_repository.dart';
 
@@ -64,11 +65,51 @@ class TaskController extends ChangeNotifier {
     }
   }
 
+  Future<List<TaskProgressModel>> getTaskProgress(int taskId) async {
+    return await _repository.getTaskProgress(taskId);
+  }
+
+  Future<bool> recordTaskProgress({
+    required int taskId,
+    required int employeeId,
+    required String status,
+    required int progressPercentage,
+    String? notes,
+    double? actualHours,
+    UserModel? currentUser,
+    String? taskTitle,
+  }) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final success = await _repository.addTaskProgress(
+        taskId: taskId,
+        employeeId: employeeId,
+        status: status,
+        progressPercentage: progressPercentage,
+        notes: notes,
+        actualHours: actualHours,
+        employeeName: currentUser?.name,
+        employeeCode: currentUser?.employeeCode,
+        taskTitle: taskTitle,
+      );
+      if (success) {
+        await loadTasks(currentUser);
+      }
+      return success;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<bool> updateTaskStatus({
     required int taskId,
     required String status,
     UserModel? currentUser,
     String? notes,
+    int? progressPercentage,
+    double? actualHours,
   }) async {
     _isLoading = true;
     notifyListeners();
@@ -78,6 +119,10 @@ class TaskController extends ChangeNotifier {
         status,
         employeeId: currentUser?.employeeId,
         notes: notes,
+        progressPercentage: progressPercentage,
+        actualHours: actualHours,
+        employeeName: currentUser?.name,
+        employeeCode: currentUser?.employeeCode,
       );
       if (success) {
         await loadTasks(currentUser);

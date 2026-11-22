@@ -15,6 +15,8 @@ class TaskModel {
   final String? startDate;
   final String deadline;
   final String? completedAt;
+  final int progressPercentage;
+  final String? latestNotes;
 
   TaskModel({
     required this.id,
@@ -33,6 +35,8 @@ class TaskModel {
     this.startDate,
     required this.deadline,
     this.completedAt,
+    this.progressPercentage = 0,
+    this.latestNotes,
   });
 
   bool get isCompleted => status == 'completed';
@@ -67,6 +71,16 @@ class TaskModel {
   }
 
   factory TaskModel.fromMap(Map<String, dynamic> map) {
+    final st = map['status']?.toString().toLowerCase() ?? 'not_started';
+    int defaultPct = 0;
+    if (st == 'completed') {
+      defaultPct = 100;
+    } else if (st == 'review') {
+      defaultPct = 90;
+    } else if (st == 'in_progress') {
+      defaultPct = 50;
+    }
+
     return TaskModel(
       id: int.tryParse(map['id']?.toString() ?? '') ?? 0,
       categoryId: int.tryParse(map['category_id']?.toString() ?? '') ?? 0,
@@ -78,12 +92,14 @@ class TaskModel {
       title: map['title']?.toString() ?? '',
       description: map['description']?.toString() ?? '',
       priority: map['priority']?.toString().toLowerCase() ?? 'medium',
-      status: map['status']?.toString().toLowerCase() ?? 'not_started',
+      status: st,
       estimatedHours: double.tryParse(map['estimated_hours']?.toString() ?? '') ?? 0.0,
       actualHours: double.tryParse(map['actual_hours']?.toString() ?? '') ?? 0.0,
       startDate: map['start_date'] != null ? map['start_date'].toString().split(' ')[0] : null,
       deadline: (map['deadline']?.toString() ?? '').split(' ')[0],
       completedAt: map['completed_at']?.toString(),
+      progressPercentage: int.tryParse(map['progress_percentage']?.toString() ?? '') ?? defaultPct,
+      latestNotes: map['latest_notes']?.toString() ?? map['notes']?.toString(),
     );
   }
 
@@ -105,6 +121,8 @@ class TaskModel {
       'start_date': startDate,
       'deadline': deadline,
       'completed_at': completedAt,
+      'progress_percentage': progressPercentage,
+      'latest_notes': latestNotes,
     };
   }
 }
